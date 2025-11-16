@@ -263,6 +263,6 @@ For support and inquiries:
 ---
 
 <div align="center">
-  <p>Made with ❤️ by DICT MIMAROPA</p>
+  <p>Made with ❤️ by RYAN LANUEVO CLAUD</p>
   <p>© 2024 iBarangay. All rights reserved.</p>
 </div>
