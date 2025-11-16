@@ -256,7 +256,8 @@ This project is developed for DICT MIMAROPA Region IV-B.
 ## 📞 Support
 
 For support and inquiries:
-- **Email:** dict.mimaropa@dict.gov.ph
+- **Email:** ibarangays@gmail.com
+- **Developer:** ryanclaud4@gmail.com
 - **GitHub Issues:** [Create an issue](https://github.com/RyanClaud/ibarangay_project-BMS/issues)
 
 ---
