@@ -75,6 +75,13 @@ service cloud.firestore {
     }
 
     /**
+     * @description Checks if the authenticated user is a Treasurer.
+     */
+    function isTreasurer() {
+      return isSignedIn() && getUserRole(request.auth.uid) == "Treasurer";
+    }
+
+    /**
      * @description Checks if the resource belongs to the user's barangay or if user is super admin.
      */
     function isSameBarangay(resourceBarangayId) {
@@ -98,7 +105,9 @@ service cloud.firestore {
       // Allow listing active barangays for registration
       allow list: if true;
       allow create: if true; // Allow creation during initial setup
-      allow update: if isSuperAdmin() || (isAdmin() && isSameBarangay(barangayId));
+      // Allow Admin and Treasurer to update their barangay
+      allow update: if isSuperAdmin() || 
+                       ((isAdmin() || isTreasurer()) && isSameBarangay(barangayId));
       allow delete: if isSuperAdmin();
     }
 
