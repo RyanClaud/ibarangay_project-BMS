@@ -562,14 +562,18 @@ function AppProviderContent({ children }: { children: ReactNode }) {
         // Remove password from user object before saving to Firestore
         const { password: _, ...userWithoutPassword } = user;
         
+        // Create user document - staff members should NOT have residentId
         const newUser: User = {
           ...userWithoutPassword,
           id: authUser.uid,
           avatarUrl: `https://picsum.photos/seed/${authUser.uid}/100/100`,
           barangayId: barangayId,
+          // Explicitly set residentId to undefined for staff members
+          residentId: undefined,
         };
+        
         const userRef = doc(firestore, 'users', authUser.uid);
-        await setDoc(userRef, newUser, { merge: true });
+        await setDoc(userRef, newUser);
 
         // After creating the user, sign them out and sign the admin back in.
         if (auth.currentUser?.uid === authUser.uid && adminUser) {
