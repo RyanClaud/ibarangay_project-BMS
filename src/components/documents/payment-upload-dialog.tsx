@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,11 +20,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Upload, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Upload, Image as ImageIcon, Copy, Check } from 'lucide-react';
 import { useFirebase } from '@/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc } from 'firebase/firestore';
-import type { DocumentRequest } from '@/lib/types';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import type { DocumentRequest, PaymentSettings } from '@/lib/types';
+import Image from 'next/image';
 
 interface PaymentUploadDialogProps {
   isOpen: boolean;
@@ -57,6 +58,31 @@ export function PaymentUploadDialog({
   );
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [copiedNumber, setCopiedNumber] = useState(false);
+
+  // Fetch payment settings
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      if (!firestore || !request.barangayId) return;
+      
+      try {
+        const barangayRef = doc(firestore, 'barangays', request.barangayId);
+        const barangaySnap = await getDoc(barangayRef);
+        
+        if (barangaySnap.exists()) {
+          const data = barangaySnap.data();
+          setPaymentSettings(data.paymentSettings || null);
+        }
+      } catch (error) {
+        console.error('Error fetching payment settings:', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchPaymentSettings();
+    }
+  }, [firestore, request.barangayId, isOpen]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,6 +187,16 @@ export function PaymentUploadDialog({
     setPreviewUrl(null);
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedNumber(true);
+    setTimeout(() => setCopiedNumber(false), 2000);
+    toast({
+      title: 'Copied!',
+      description: 'GCash number copied to clipboard',
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -180,6 +216,72 @@ export function PaymentUploadDialog({
               Please pay this exact amount and upload proof of payment
             </p>
           </div>
+
+          {/* GCash Payment Information */}
+          {paymentSettings?.gcashNumber && (
+            <div className="bg-emerald-50 dark:bg-emerald-950 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  G
+                </div>
+                <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">
+                  GCash Payment Details
+                </h4>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between bg-white dark:bg-emerald-900 p-2 rounded">
+                  <div>
+                    <p className="text-xs text-muted-foreground">GCash Number</p>
+                    <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-100">
+                      {paymentSettings.gcashNumber}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyToClipboard(paymentSettings.gcashNumber!)}
+                  >
+                    {copiedNumber ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
+                {paymentSettings.gcashName && (
+                  <div className="bg-white dark:bg-emerald-900 p-2 rounded">
+                    <p className="text-xs text-muted-foreground">Account Name</p>
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+                      {paymentSettings.gcashName}
+                    </p>
+                  </div>
+                )}
+
+                {paymentSettings.gcashQRCodeUrl && (
+                  <div className="flex justify-center p-3 bg-white dark:bg-emerald-900 rounded">
+                    <div className="text-center space-y-2">
+                      <p className="text-xs text-muted-foreground">Scan to Pay</p>
+                      <Image
+                        src={paymentSettings.gcashQRCodeUrl}
+                        alt="GCash QR Code"
+                        width={150}
+                        height={150}
+                        className="rounded border-2 border-emerald-200"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                💡 Send payment to this GCash number, then upload your payment proof below
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="paymentMethod">

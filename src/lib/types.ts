@@ -9,6 +9,12 @@ export type DocumentPricing = {
   "Solo Parent Certificate": number;
 };
 
+export type PaymentSettings = {
+  gcashNumber?: string;
+  gcashName?: string;
+  gcashQRCodeUrl?: string;
+};
+
 export type Barangay = {
   id: string;
   name: string;
@@ -20,6 +26,7 @@ export type Barangay = {
   isActive: boolean;
   createdAt: string;
   documentPricing?: DocumentPricing; // Custom pricing per barangay
+  paymentSettings?: PaymentSettings; // GCash payment configuration
 };
 
 export type BarangayConfig = Barangay; // Alias for backward compatibility

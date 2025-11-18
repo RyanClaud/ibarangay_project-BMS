@@ -17,6 +17,7 @@ import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { useAppContext } from "@/contexts/app-context";
 import { ResidentSettings } from "@/components/account/resident-settings";
 import { DocumentPricingForm } from "@/components/settings/document-pricing-form";
+import { PaymentSettingsForm } from "@/components/settings/payment-settings-form";
 
 
 function AdminSettings() {
@@ -85,9 +86,12 @@ function AdminSettings() {
     }
   };
 
+  // Check if user can manage payment settings (Treasurer or Admin)
+  const canManagePayments = contextUser?.role === 'Treasurer' || contextUser?.role === 'Admin' || contextUser?.isSuperAdmin;
+
   return (
     <Tabs defaultValue="account" className="w-full">
-      <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${canManageUsers ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} h-auto p-1 gap-1`}>
+      <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${canManageUsers ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} h-auto p-1 gap-1`}>
         <TabsTrigger value="account" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900">
           🔐 Account
         </TabsTrigger>
@@ -96,6 +100,9 @@ function AdminSettings() {
         </TabsTrigger>
         <TabsTrigger value="pricing" className="data-[state=active]:bg-green-100 dark:data-[state=active]:bg-green-900">
           💰 Pricing
+        </TabsTrigger>
+        <TabsTrigger value="payment" className="data-[state=active]:bg-emerald-100 dark:data-[state=active]:bg-emerald-900">
+          💳 Payment
         </TabsTrigger>
         {canManageUsers && (
           <TabsTrigger value="users" className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900">
@@ -192,6 +199,9 @@ function AdminSettings() {
       </TabsContent>
       <TabsContent value="pricing">
         <DocumentPricingForm />
+      </TabsContent>
+      <TabsContent value="payment">
+        <PaymentSettingsForm />
       </TabsContent>
       {canManageUsers && (
         <TabsContent value="users">
