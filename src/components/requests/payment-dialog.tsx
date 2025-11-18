@@ -9,15 +9,17 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { DocumentRequest, DocumentRequestStatus } from '@/lib/types';
-import { Copy, Loader2, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { DocumentRequest, DocumentRequestStatus, PaymentSettings } from '@/lib/types';
+import { Copy, Loader2, Upload, X, Image as ImageIcon, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAppContext } from '@/contexts/app-context';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useFirebase } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc } from 'firebase/firestore';
+import Image from 'next/image';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -27,16 +29,46 @@ interface PaymentDialogProps {
 
 export function PaymentDialog({ isOpen, onClose, request }: PaymentDialogProps) {
   const { updateDocumentRequestStatus } = useAppContext();
-  const { storage } = useFirebase();
+  const { storage, firestore } = useFirebase();
   const [transactionId, setTransactionId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [copiedNumber, setCopiedNumber] = useState(false);
+
+  // Fetch payment settings when dialog opens
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      if (!firestore || !request.barangayId || !isOpen) return;
+      
+      try {
+        const barangayRef = doc(firestore, 'barangays', request.barangayId);
+        const barangaySnap = await getDoc(barangayRef);
+        
+        if (barangaySnap.exists()) {
+          const data = barangaySnap.data();
+          setPaymentSettings(data.paymentSettings || null);
+        }
+      } catch (error) {
+        console.error('Error fetching payment settings:', error);
+      }
+    };
+
+    fetchPaymentSettings();
+  }, [firestore, request.barangayId, isOpen]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copied!", description: "Reference number copied to clipboard." });
+  }
+
+  const copyGCashNumber = (number: string) => {
+    navigator.clipboard.writeText(number);
+    setCopiedNumber(true);
+    setTimeout(() => setCopiedNumber(false), 2000);
+    toast({ title: "Copied!", description: "GCash number copied to clipboard." });
   }
 
   const compressImageToBase64 = (file: File): Promise<string> => {
@@ -241,11 +273,70 @@ export function PaymentDialog({ isOpen, onClose, request }: PaymentDialogProps) 
                 <p className="text-sm text-muted-foreground">Total Amount Due</p>
                 <p className="text-4xl font-bold">{request.amount.toLocaleString('en-US', { style: 'currency', currency: 'PHP' })}</p>
             </div>
-            <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+            {/* GCash Payment Information */}
+            {paymentSettings?.gcashNumber ? (
+              <div className="rounded-lg border bg-emerald-50 dark:bg-emerald-950 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    G
+                  </div>
+                  <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                    1. Pay to this GCash Number:
+                  </p>
+                </div>
+                
+                <div className="flex items-center justify-between bg-white dark:bg-emerald-900 p-3 rounded">
+                  <div>
+                    <p className="text-xs text-muted-foreground">GCash Number</p>
+                    <p className="font-mono text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+                      {paymentSettings.gcashNumber}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyGCashNumber(paymentSettings.gcashNumber!)}
+                  >
+                    {copiedNumber ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
+                {paymentSettings.gcashName && (
+                  <div className="bg-white dark:bg-emerald-900 p-3 rounded">
+                    <p className="text-xs text-muted-foreground">Account Name</p>
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+                      {paymentSettings.gcashName}
+                    </p>
+                  </div>
+                )}
+
+                {paymentSettings.gcashQRCodeUrl && (
+                  <div className="flex justify-center p-3 bg-white dark:bg-emerald-900 rounded">
+                    <div className="text-center space-y-2">
+                      <p className="text-xs text-muted-foreground">Scan to Pay</p>
+                      <Image
+                        src={paymentSettings.gcashQRCodeUrl}
+                        alt="GCash QR Code"
+                        width={150}
+                        height={150}
+                        className="rounded border-2 border-emerald-200"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
                 <p className="text-sm text-muted-foreground">1. Pay to this GCash Number:</p>
-                <p className="font-mono text-lg font-semibold">0912-345-6789</p>
-                <p className="text-sm text-muted-foreground">Account Name: Juan Dela Cruz</p>
-            </div>
+                <p className="text-sm text-amber-600">GCash payment details not configured yet. Please contact the barangay office.</p>
+              </div>
+            )}
             <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
                 <p className="text-sm text-muted-foreground">2. Use this as the Reference Number:</p>
                  <div className="flex items-center justify-between gap-4">
