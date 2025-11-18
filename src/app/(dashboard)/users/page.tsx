@@ -237,8 +237,15 @@ export default function UsersPage() {
             setIsAddDialogOpen(false);
             toast({
               title: 'Staff Account Created',
-              description: `${userData.name} has been added as ${userData.role}. They can now log in with their email and password.`,
+              description: `${userData.name} has been added as ${userData.role}. Page will refresh to complete setup.`,
+              duration: 2000,
             });
+            
+            // CRITICAL: Force page reload to ensure clean state
+            // This prevents any lingering auth state issues
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
           } catch (error: any) {
             // Error toast is already shown in the dialog
             throw error;
