@@ -27,8 +27,9 @@ export default function CreatingUserPage() {
               // Wait 1 second to ensure all Firebase operations are complete
               setTimeout(() => {
                 console.log('🔄 Performing hard reload to ensure clean state');
-                // Use window.location for hard reload (clears all React state)
-                window.location.href = '/settings?tab=users';
+                // Add timestamp to force fresh load and bypass any caching
+                const timestamp = Date.now();
+                window.location.href = `/settings?tab=users&t=${timestamp}`;
               }, 1000);
             }
           } catch (error) {
@@ -50,7 +51,8 @@ export default function CreatingUserPage() {
           if (checkInterval) clearInterval(checkInterval);
           sessionStorage.removeItem('creating_user');
           console.log('⏱️ Timeout reached - performing hard reload');
-          window.location.href = '/settings?tab=users';
+          const timestamp = Date.now();
+          window.location.href = `/settings?tab=users&t=${timestamp}`;
         } catch (error) {
           console.error('Error in timeout handler:', error);
           window.location.href = '/settings?tab=users';
