@@ -237,22 +237,21 @@ export default function UsersPage() {
           }
           
           setIsCreatingUser(true);
+          
+          // CRITICAL: Redirect to isolated loading page to prevent query errors
+          router.push('/creating-user');
+          
           try {
             await addUser(userData);
             setLastCreationTime(Date.now());
-            setIsAddDialogOpen(false);
-            toast({
-              title: 'Staff Account Created Successfully',
-              description: `${userData.name} has been added as ${userData.role}. Page will refresh in 4 seconds...`,
-              duration: 4000,
-            });
             
-            // CRITICAL: Force page reload to ensure clean state
-            // Increased delay to allow user to see the success message and any console logs
-            setTimeout(() => {
-              console.log('🔄 Reloading page to complete user creation...');
-              window.location.reload();
-            }, 4000); // Increased from 2 to 4 seconds
+            // Success - the loading page will redirect back automatically
+            console.log('✅ User creation complete');
+          } catch (error: any) {
+            // On error, clear the lock and go back
+            sessionStorage.removeItem('creating_user');
+            router.push('/settings?tab=users');
+            throw error;
           } catch (error: any) {
             // Error toast is already shown in the dialog
             throw error;

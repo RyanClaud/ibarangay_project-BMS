@@ -27,8 +27,18 @@ function AdminSettings() {
   const [sealLogoUrl, setSealLogoUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("account");
 
   const { currentUser: contextUser } = useAppContext();
+  
+  // Check URL params for tab
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, []);
   
   // Check if user is Admin, Barangay Captain, or Super Admin (they can manage users)
   const canManageUsers = contextUser?.role === 'Admin' || contextUser?.role === 'Barangay Captain' || contextUser?.isSuperAdmin;
@@ -90,7 +100,7 @@ function AdminSettings() {
   const canManagePayments = contextUser?.role === 'Treasurer' || contextUser?.role === 'Admin' || contextUser?.isSuperAdmin;
 
   return (
-    <Tabs defaultValue="account" className="w-full">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${canManageUsers ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} h-auto p-1 gap-1`}>
         <TabsTrigger value="account" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900">
           🔐 Account
