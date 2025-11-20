@@ -42,12 +42,26 @@ interface AddUserDialogProps {
   onClose: () => void;
   onAddUser: (user: Omit<User, 'id' | 'avatarUrl' | 'residentId'>) => Promise<void>;
   isCreating?: boolean;
+  existingUsers?: User[]; // List of existing users to check for taken roles
 }
 
 const ROLES: Role[] = ["Admin", "Barangay Captain", "Secretary", "Treasurer"];
 
-export function AddUserDialog({ isOpen, onClose, onAddUser, isCreating = false }: AddUserDialogProps) {
+// Roles that should only have one person
+const UNIQUE_ROLES: Role[] = ["Barangay Captain", "Secretary", "Treasurer"];
+
+export function AddUserDialog({ isOpen, onClose, onAddUser, isCreating = false, existingUsers = [] }: AddUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Check which roles are already taken
+  const takenRoles = new Set(
+    existingUsers
+      .filter(user => !user.isDeleted && UNIQUE_ROLES.includes(user.role as Role))
+      .map(user => user.role)
+  );
+  
+  // Filter available roles
+  const availableRoles = ROLES.filter(role => !takenRoles.has(role));
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -138,9 +152,18 @@ export function AddUserDialog({ isOpen, onClose, onAddUser, isCreating = false }
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ROLES.map(role => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
+                      {ROLES.map(role => {
+                        const isTaken = takenRoles.has(role);
+                        return (
+                          <SelectItem 
+                            key={role} 
+                            value={role}
+                            disabled={isTaken}
+                          >
+                            {role} {isTaken && '(Already assigned)'}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -223,6 +223,7 @@ export default function UsersPage() {
       <AddUserDialog
         isOpen={isAddDialogOpen}
         onClose={() => !isCreatingUser && setIsAddDialogOpen(false)}
+        existingUsers={staffUsers}
         onAddUser={async (userData) => {
           // Prevent rapid successive creations
           const now = Date.now();

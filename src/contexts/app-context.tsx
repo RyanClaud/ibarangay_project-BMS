@@ -232,6 +232,12 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     // User is logged in, get their Firestore document
     const userDocRef = doc(firestore, 'users', firebaseUser.uid);
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      // CRITICAL: Check lock inside snapshot callback too
+      if (isInUserCreationMode()) {
+        console.log('🔒 Snapshot callback blocked - user creation in progress');
+        return;
+      }
+      
       if (docSnap.exists()) { // If the user document exists, use it.
         const appUser = docSnap.data() as User;
         
@@ -257,6 +263,12 @@ function AppProviderContent({ children }: { children: ReactNode }) {
           }
         }
       } else {
+        // CRITICAL: Don't create default user during user creation
+        if (isInUserCreationMode()) {
+          console.log('🔒 Skipping default user creation - user creation in progress');
+          return;
+        }
+        
         // If the user document does NOT exist, create a default one.
         // This ensures every authenticated user is represented in Firestore.
         console.warn(`No user document for ${firebaseUser.uid}. Creating default 'Resident' user.`);
@@ -672,27 +684,37 @@ function AppProviderContent({ children }: { children: ReactNode }) {
         await setDoc(userRef, newUser);
         console.log('✅ User document created with role:', newUser.role);
         
-        // Step 3: Wait to ensure Firestore write is complete
-        console.log('⏳ Waiting for Firestore write to complete...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Step 3: Verify the document was written correctly
+        const verifyDoc = await getDoc(userRef);
+        if (verifyDoc.exists()) {
+          const savedData = verifyDoc.data();
+          console.log('✅ Verified saved role:', savedData.role);
+          if (savedData.role !== user.role) {
+            console.error('❌ Role mismatch! Expected:', user.role, 'Got:', savedData.role);
+          }
+        }
         
-        // Step 4: Sign out the new user IMMEDIATELY
+        // Step 4: Wait to ensure Firestore write is complete and propagated
+        console.log('⏳ Waiting for Firestore write to propagate...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Step 5: Sign out the new user IMMEDIATELY
         await signOut(auth);
         console.log('✅ New user signed out');
         
-        // Step 5: Wait before re-auth
+        // Step 6: Wait before re-auth
         console.log('⏳ Preparing to re-authenticate admin...');
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Step 6: Re-authenticate as admin
+        // Step 7: Re-authenticate as admin
         await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
         console.log('✅ Admin re-authenticated');
         
-        // Step 7: Wait for auth state to stabilize
+        // Step 8: Wait for auth state to stabilize
         console.log('⏳ Stabilizing auth state...');
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Increased to 1.5 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
         
-        // Step 8: Release the lock
+        // Step 9: Release the lock
         isCreatingUser = false;
         sessionStorage.removeItem('creating_user');
         console.log('🔓 User creation lock RELEASED (memory + sessionStorage)');
