@@ -8,27 +8,44 @@ export default function CreatingUserPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if we're still in user creation mode
-    const checkStatus = setInterval(() => {
-      const isCreating = sessionStorage.getItem('creating_user') === 'true';
+    // Wait a moment before starting to check (let the creation process start)
+    const initialDelay = setTimeout(() => {
+      // Check if we're still in user creation mode
+      const checkStatus = setInterval(() => {
+        const isCreating = sessionStorage.getItem('creating_user') === 'true';
+        
+        if (!isCreating) {
+          // User creation complete, wait a bit more then do a HARD RELOAD
+          clearInterval(checkStatus);
+          console.log('✅ User creation complete - waiting 1 second before reload');
+          
+          // Wait 1 second to ensure all Firebase operations are complete
+          setTimeout(() => {
+            console.log('🔄 Performing hard reload to ensure clean state');
+            // Use window.location for hard reload (clears all React state)
+            window.location.href = '/settings?tab=users';
+          }, 1000);
+        }
+      }, 500);
       
-      if (!isCreating) {
-        // User creation complete, redirect back
-        clearInterval(checkStatus);
-        router.push('/settings?tab=users');
-      }
-    }, 500);
+      // Store interval ID for cleanup
+      (window as any).__userCreationCheckInterval = checkStatus;
+    }, 1000);
 
     // Timeout after 15 seconds (safety)
     const timeout = setTimeout(() => {
-      clearInterval(checkStatus);
+      const checkInterval = (window as any).__userCreationCheckInterval;
+      if (checkInterval) clearInterval(checkInterval);
       sessionStorage.removeItem('creating_user');
-      router.push('/settings?tab=users');
+      console.log('⏱️ Timeout reached - performing hard reload');
+      window.location.href = '/settings?tab=users';
     }, 15000);
 
     return () => {
-      clearInterval(checkStatus);
+      clearTimeout(initialDelay);
       clearTimeout(timeout);
+      const checkInterval = (window as any).__userCreationCheckInterval;
+      if (checkInterval) clearInterval(checkInterval);
     };
   }, [router]);
 
