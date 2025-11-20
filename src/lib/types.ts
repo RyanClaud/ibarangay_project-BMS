@@ -40,6 +40,9 @@ export type User = {
   barangayId: string; // Assigned barangay
   residentId?: string; // Link user to a resident profile
   isSuperAdmin?: boolean; // Can manage multiple barangays
+  isDeleted?: boolean; // Soft delete flag
+  deletedAt?: string; // When the user was deleted
+  deletedBy?: string; // Who deleted the user
 };
 
 export type Resident = {

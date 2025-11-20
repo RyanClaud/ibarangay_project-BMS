@@ -134,7 +134,8 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     // Only Admin and Super Admin can see all users
     // Other staff (Secretary, Treasurer, Captain) only see their own user document
     if (isAdminOrSuperAdmin) {
-      return allUsers;
+      // Filter out deleted users
+      return allUsers?.filter(user => !user.isDeleted) || null;
     }
     // Non-admin staff and residents only see their own user document
     return currentUser ? [currentUser] : [];
@@ -212,6 +213,19 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) { // If the user document exists, use it.
         const appUser = docSnap.data() as User;
+        
+        // Check if user is deleted
+        if (appUser.isDeleted) {
+          console.warn(`User ${firebaseUser.uid} is marked as deleted. Forcing logout.`);
+          toast({
+            title: 'Account Disabled',
+            description: 'Your account has been disabled by an administrator.',
+            variant: 'destructive',
+          });
+          logout();
+          return;
+        }
+        
         if (!appUser.role) {
           console.error(`User document for ${firebaseUser.uid} is missing a role. Forcing logout.`);
           logout();
@@ -699,11 +713,39 @@ function AppProviderContent({ children }: { children: ReactNode }) {
   };
   
 
-  const deleteUser = (userId: string) => {
-    if (!firestore) return;
-    console.warn("Warning: Deleting user from Firestore only. Auth user remains and should be deleted from the Firebase Console or via a backend function.");
-    const userRef = doc(firestore, 'users', userId);
-    deleteDocumentNonBlocking(userRef);
+  const deleteUser = async (userId: string) => {
+    if (!firestore || !currentUser) return;
+    
+    try {
+      const userRef = doc(firestore, 'users', userId);
+      
+      // Soft delete: Mark as deleted instead of removing
+      await updateDoc(userRef, {
+        isDeleted: true,
+        deletedAt: new Date().toISOString(),
+        deletedBy: currentUser.id,
+        // Disable login by changing role
+        role: 'Resident', // Demote to resident to remove staff permissions
+      });
+      
+      console.log('✅ User marked as deleted in Firestore');
+      
+      toast({
+        title: 'User Account Disabled',
+        description: 'The user account has been disabled. They can no longer log in with staff permissions.',
+      });
+      
+      // Note: Firebase Auth account remains but user cannot access staff features
+      console.warn('Note: Firebase Auth account still exists but user is marked as deleted and demoted to Resident role.');
+      
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: 'Delete Failed',
+        description: error.message || 'Failed to delete user account.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
