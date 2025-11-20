@@ -19,7 +19,7 @@ import { Label } from '../ui/label';
 import { useFirebase } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc } from 'firebase/firestore';
-import Image from 'next/image';
+import NextImage from 'next/image';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -76,7 +76,7 @@ export function PaymentDialog({ isOpen, onClose, request }: PaymentDialogProps) 
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
-        const img = new Image();
+        const img = new window.Image(); // Use native HTML Image constructor
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');

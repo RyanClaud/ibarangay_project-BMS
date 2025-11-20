@@ -35,11 +35,18 @@ export function UserManagementClientPage() {
   const [userToEdit, setUserToEdit] = React.useState<User | null>(null);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
 
-  const filteredData = (users || []).filter(
+  // Filter staff users (non-residents, non-deleted)
+  const staffUsers = (users || []).filter(
     (user) =>
       user.role !== 'Resident' &&
-      (user.name.toLowerCase().includes(filter.toLowerCase()) ||
-      user.email.toLowerCase().includes(filter.toLowerCase()))
+      !user.isDeleted &&
+      user.barangayId === currentUser?.barangayId
+  );
+
+  const filteredData = staffUsers.filter(
+    (user) =>
+      user.name.toLowerCase().includes(filter.toLowerCase()) ||
+      user.email.toLowerCase().includes(filter.toLowerCase())
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleAddUser = async (newUser: Omit<User, 'id' | 'avatarUrl' | 'residentId'>) => {
@@ -138,6 +145,7 @@ export function UserManagementClientPage() {
           isOpen={isAddDialogOpen}
           onClose={() => setIsAddDialogOpen(false)}
           onAddUser={handleAddUser}
+          existingUsers={staffUsers}
         />
         {userToEdit && (
           <EditUserDialog

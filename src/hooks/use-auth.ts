@@ -83,7 +83,12 @@ export function useAuth() {
         if (appUser) {
             setCurrentUser(appUser);
             if (isLoginPage) {
-                router.push('/dashboard');
+                // Redirect Super Admins to their specific dashboard
+                if (appUser.isSuperAdmin) {
+                    router.push('/super-admin');
+                } else {
+                    router.push('/dashboard');
+                }
             }
         } else {
             // This case now only happens if ensureUserDocument itself calls logout.

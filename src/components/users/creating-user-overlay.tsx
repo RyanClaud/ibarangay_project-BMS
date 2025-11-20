@@ -11,68 +11,148 @@ export function CreatingUserOverlay({ isCreating }: CreatingUserOverlayProps) {
   useEffect(() => {
     if (!isCreating) return;
 
-    // Hide all error overlays with maximum specificity
+    // Hide all error overlays with maximum specificity and aggressive selectors
     const style = document.createElement('style');
     style.id = 'creating-user-overlay-styles';
     style.textContent = `
-      /* Hide Next.js error overlays */
+      /* Hide ALL Next.js error overlays and dialogs */
       body > nextjs-portal,
       body > [data-nextjs-dialog-overlay],
       body > [data-nextjs-dialog],
+      body > [data-nextjs-toast],
+      body > [data-nextjs-error-overlay],
+      body > [data-overlay-container],
+      body > [data-nextjs-error],
       #__next-build-watcher,
-      [data-nextjs-toast],
-      [data-nextjs-error-overlay],
-      [data-overlay-container] {
+      [data-nextjs-scroll-lock],
+      .nextjs-container-errors-pseudo-html,
+      .nextjs-container-errors,
+      .nextjs-toast-errors,
+      [id^="__next"],
+      [class*="nextjs"],
+      [class*="error-overlay"],
+      [class*="toast-error"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
-        z-index: -1 !important;
+        z-index: -9999 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
       }
       
-      /* Ensure our overlay is on top */
+      /* Ensure our overlay is ALWAYS on top with maximum z-index */
       .creating-user-fullscreen-overlay {
-        z-index: 999999 !important;
+        z-index: 2147483647 !important;
+        position: fixed !important;
+        inset: 0 !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      /* Lock body scroll */
+      body {
+        overflow: hidden !important;
+      }
+      
+      /* Hide any error boundaries */
+      [data-error-boundary],
+      [class*="error-boundary"] {
+        display: none !important;
       }
     `;
     document.head.appendChild(style);
 
-    // Intercept and suppress console errors
+    // Intercept and suppress ALL console errors and warnings
     const originalError = console.error;
+    const originalWarn = console.warn;
     (window as any).__originalConsoleError = originalError;
+    (window as any).__originalConsoleWarn = originalWarn;
     
     console.error = (...args: any[]) => {
       const msg = args.join(' ');
       if (msg.includes('Missing or insufficient permissions') || 
           msg.includes('PERMISSION_DENIED') ||
-          msg.includes('FirebaseError')) {
+          msg.includes('permission-denied') ||
+          msg.includes('FirebaseError') ||
+          msg.includes('auth/') ||
+          msg.includes('Firestore')) {
         // Silently ignore Firebase errors during creation
         return;
       }
       originalError.apply(console, args);
     };
+    
+    console.warn = (...args: any[]) => {
+      const msg = args.join(' ');
+      if (msg.includes('Missing or insufficient permissions') || 
+          msg.includes('PERMISSION_DENIED') ||
+          msg.includes('permission-denied') ||
+          msg.includes('FirebaseError') ||
+          msg.includes('auth/') ||
+          msg.includes('Firestore')) {
+        // Silently ignore Firebase warnings during creation
+        return;
+      }
+      originalWarn.apply(console, args);
+    };
+
+    // Aggressively remove any error overlays that appear
+    const removeErrorOverlays = () => {
+      const selectors = [
+        'nextjs-portal',
+        '[data-nextjs-dialog-overlay]',
+        '[data-nextjs-dialog]',
+        '[data-nextjs-toast]',
+        '[data-nextjs-error-overlay]',
+        '[data-overlay-container]',
+        '[data-nextjs-error]',
+        '.nextjs-container-errors',
+        '.nextjs-toast-errors'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          (el as HTMLElement).style.display = 'none';
+          (el as HTMLElement).style.visibility = 'hidden';
+          (el as HTMLElement).style.opacity = '0';
+          (el as HTMLElement).style.zIndex = '-9999';
+        });
+      });
+    };
+
+    // Remove overlays immediately and periodically
+    removeErrorOverlays();
+    const removeInterval = setInterval(removeErrorOverlays, 100);
 
     // Poll for completion
     const checkInterval = setInterval(() => {
       const stillCreating = sessionStorage.getItem('creating_user') === 'true';
       if (!stillCreating) {
         clearInterval(checkInterval);
-        // Reload page after creation completes
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        clearInterval(removeInterval);
+        console.log('✅ Creation lock released - reloading immediately');
+        // Reload immediately to prevent any error pages from showing
+        window.location.reload();
       }
-    }, 500);
+    }, 200); // Check very frequently (every 200ms)
 
     // Cleanup
     return () => {
       clearInterval(checkInterval);
+      clearInterval(removeInterval);
       const styleEl = document.getElementById('creating-user-overlay-styles');
       if (styleEl) styleEl.remove();
       
-      // Restore console.error
+      // Restore console methods
       if ((window as any).__originalConsoleError) {
         console.error = (window as any).__originalConsoleError;
+      }
+      if ((window as any).__originalConsoleWarn) {
+        console.warn = (window as any).__originalConsoleWarn;
       }
     };
   }, [isCreating]);

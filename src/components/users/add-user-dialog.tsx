@@ -62,12 +62,16 @@ export function AddUserDialog({ isOpen, onClose, onAddUser, isCreating = false, 
   
   // Filter available roles
   const availableRoles = ROLES.filter(role => !takenRoles.has(role));
+  
+  // Set default role to the first available role
+  const defaultRole = availableRoles.length > 0 ? availableRoles[0] : 'Secretary';
+  
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       name: '',
       email: '',
-      role: 'Secretary',
+      role: defaultRole,
       password: '',
     },
   });

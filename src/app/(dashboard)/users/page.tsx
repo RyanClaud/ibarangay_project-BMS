@@ -43,9 +43,11 @@ export default function UsersPage() {
   }, [currentUser, isDataLoading, router]);
 
   // Filter out Admin users from the list (only show staff)
+  // Also filter out deleted users from the display
   const staffUsers = users?.filter(user => 
     user.role !== 'Resident' && 
-    user.barangayId === currentUser?.barangayId
+    user.barangayId === currentUser?.barangayId &&
+    !user.isDeleted
   ) || [];
 
   const handleEdit = (user: User) => {
@@ -131,10 +133,6 @@ export default function UsersPage() {
             </svg>
             Refresh
           </Button>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Staff
-          </Button>
         </div>
       </div>
 
@@ -154,12 +152,8 @@ export default function UsersPage() {
               <UserCog className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
               <h3 className="mt-4 text-lg font-semibold">No staff members yet</h3>
               <p className="text-muted-foreground mt-2">
-                Add your first staff member to get started
+                Staff members can be added from the Settings page
               </p>
-              <Button onClick={() => setIsAddDialogOpen(true)} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Staff Member
-              </Button>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -224,15 +218,15 @@ export default function UsersPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
             <Shield className="h-5 w-5" />
-            Security Notice
+            Information
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-blue-800 dark:text-blue-200">
           <ul className="space-y-2">
             <li>• Only administrators can view and manage staff accounts</li>
             <li>• Staff members (Secretary, Treasurer, Captain) cannot access this page</li>
-            <li>• Set strong passwords for all staff accounts</li>
-            <li>• Advise staff to change their password after first login</li>
+            <li>• To add new staff members, go to Settings → Staff Management</li>
+            <li>• You can edit or remove staff members from this page</li>
             <li>• You cannot delete your own account</li>
           </ul>
         </CardContent>
@@ -259,8 +253,15 @@ export default function UsersPage() {
           setIsAddDialogOpen(false);
           
           try {
+            // CRITICAL: Ensure barangayId is explicitly set to admin's barangayId
+            const userDataWithBarangay = {
+              ...userData,
+              barangayId: currentUser?.barangayId || 'default'
+            };
+            console.log('📍 Creating user with barangayId:', userDataWithBarangay.barangayId);
+            
             // Create user - the overlay will handle the loading state
-            await addUser(userData);
+            await addUser(userDataWithBarangay);
             setLastCreationTime(Date.now());
             
             // Success - overlay will detect completion and reload

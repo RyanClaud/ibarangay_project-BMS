@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { AppProvider } from "@/contexts/app-context";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GlobalErrorInterceptor } from "@/components/global-error-interceptor";
 
 const ptSans = PT_Sans({
   subsets: ["latin"],
@@ -39,6 +40,7 @@ export default function RootLayout({
       <body className={cn("min-h-screen bg-background font-body antialiased", ptSans.variable, playfairDisplay.variable)}>
         <ThemeProvider>
           <AppProvider>
+            <GlobalErrorInterceptor />
             {children}
           </AppProvider>
         </ThemeProvider>

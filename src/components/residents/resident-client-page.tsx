@@ -21,16 +21,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Resident } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { AddResidentDialog } from "./add-resident-dialog";
 import { EditResidentDialog } from "./edit-resident-dialog";
 import { DeleteResidentDialog } from "./delete-resident-dialog";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/contexts/app-context";
 
 export function ResidentClientPage() {
-  const { residents, addResident, updateResident, deleteResident } = useAppContext();
+  const { residents, updateResident, deleteResident } = useAppContext();
   const [filter, setFilter] = React.useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [residentToEdit, setResidentToEdit] = React.useState<Resident | null>(null);
   const [residentToDelete, setResidentToDelete] = React.useState<Resident | null>(null);
   const router = useRouter();
@@ -44,10 +42,6 @@ export function ResidentClientPage() {
     // Assuming IDs are sortable strings like 'RES001', 'RES002'
     return b.id.localeCompare(a.id);
   });
-
-  const handleAddResident = async (newResident: Omit<Resident, 'id' | 'avatarUrl' | 'userId' | 'address'> & {email: string}) => {
-    await addResident(newResident);
-  };
 
   const handleUpdateResident = (residentId: string, dataToUpdate: Partial<Resident>) => {
     updateResident(residentId, dataToUpdate);
@@ -65,6 +59,22 @@ export function ResidentClientPage() {
 
   return (
     <div className="space-y-4">
+      {/* Info banner about resident registration */}
+      <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-start gap-3">
+          <div className="text-blue-600 dark:text-blue-400 text-xl">ℹ️</div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+              Resident Self-Registration
+            </h3>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Residents can register their own accounts at <strong>/register</strong>. 
+              They will automatically be added to your barangay's resident list after registration.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950 rounded-lg border">
         <Input
           placeholder="🔍 Search by name or User ID..."
@@ -76,10 +86,6 @@ export function ResidentClientPage() {
           <Button variant="outline" className="w-full sm:w-auto h-11">
             <FileDown className="mr-2 h-4 w-4" />
             Export
-          </Button>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="w-full sm:w-auto h-11 bg-purple-600 hover:bg-purple-700">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Resident
           </Button>
         </div>
       </div>
@@ -164,11 +170,6 @@ export function ResidentClientPage() {
           </TableBody>
         </Table>
       </div>
-      <AddResidentDialog
-        isOpen={isAddDialogOpen}
-        onClose={() => setIsAddDialogOpen(false)}
-        onAddResident={handleAddResident}
-      />
       {residentToEdit && (
         <EditResidentDialog
           isOpen={!!residentToEdit}

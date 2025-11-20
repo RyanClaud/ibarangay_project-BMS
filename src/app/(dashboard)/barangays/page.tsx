@@ -15,8 +15,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Building2, Mail, AlertCircle, Upload, UserPlus } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Mail, AlertCircle, Upload, UserPlus, MapPin } from "lucide-react";
 import type { Barangay } from "@/lib/types";
 import { generateBarangayId, validateBarangay, formatBarangayName } from "@/lib/barangay-utils";
 
@@ -31,6 +32,7 @@ export default function BarangaysPage() {
   const [createAdminDialogOpen, setCreateAdminDialogOpen] = useState(false);
   const [selectedBarangayForAdmin, setSelectedBarangayForAdmin] = useState<Barangay | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMunicipality, setSelectedMunicipality] = useState<string>('all');
   const [adminFormData, setAdminFormData] = useState({
     name: "",
     email: "",
@@ -57,13 +59,20 @@ export default function BarangaysPage() {
   // Check if user is super admin
   const isSuperAdmin = currentUser?.isSuperAdmin === true;
 
-  // Filter barangays based on search query
-  const filteredBarangays = barangays.filter(barangay => 
-    barangay.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    barangay.municipality.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    barangay.province.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    barangay.address.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Get unique municipalities
+  const municipalities = Array.from(new Set(barangays.map(b => b.municipality))).sort();
+  
+  // Filter barangays based on search query and selected municipality
+  const filteredBarangays = barangays.filter(barangay => {
+    const matchesSearch = barangay.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      barangay.municipality.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      barangay.province.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      barangay.address.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesMunicipality = selectedMunicipality === 'all' || barangay.municipality === selectedMunicipality;
+    
+    return matchesSearch && matchesMunicipality;
+  });
 
   useEffect(() => {
     loadBarangays();

@@ -13,12 +13,10 @@ import {
   useDoc,
   useUser,
 } from '@/firebase';
-import type { User as AuthUser } from 'firebase/auth';
-import { collection, doc, writeBatch, getDoc, setDoc, query, where, getDocs, limit, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDoc, setDoc, query, where, getDocs, limit, updateDoc, onSnapshot } from 'firebase/firestore';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, linkWithCredential, fetchSignInMethodsForEmail } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface AppContextType {
   currentUser: User | null;
@@ -80,11 +78,24 @@ const isInUserCreationMode = () => {
 
 
 function AppProviderContent({ children }: { children: ReactNode }) {
-  const { firestore, auth, storage } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { user: firebaseUser, isUserLoading: isAuthLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  
+  // CRITICAL: Disable Firebase Auth persistence on mount
+  useEffect(() => {
+    if (auth) {
+      setPersistence(auth, browserSessionPersistence)
+        .then(() => {
+          console.log('✅ Firebase Auth persistence set to SESSION only (no auto-login on restart)');
+        })
+        .catch((error) => {
+          console.error('Failed to set auth persistence:', error);
+        });
+    }
+  }, [auth]);
   
   // Restore admin credentials from sessionStorage on mount
   useEffect(() => {
@@ -212,13 +223,19 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     return isStaff ? (isAllUsersLoading || isAllResidentsLoading) : isSingleResidentLoading;
   }, [currentUser, isConfigLoading, isRequestsLoading, isStaff, isAllUsersLoading, isAllResidentsLoading, isSingleResidentLoading]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     if (!auth) return;
-    signOut(auth);
-    setCurrentUser(null);
-    adminCredentials = null; // Clear credentials on logout
-    sessionStorage.removeItem('admin_creds'); // Clear from sessionStorage too
-    sessionStorage.removeItem('creating_user'); // Clear creation lock
+    
+    try {
+      await signOut(auth);
+      setCurrentUser(null);
+      adminCredentials = null; // Clear credentials on logout
+      sessionStorage.clear(); // Clear ALL sessionStorage
+      localStorage.clear(); // Clear ALL localStorage (Firebase uses this for persistence)
+      console.log('✅ Logged out and cleared all stored data');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   }, [auth]);
 
   // --- Auth Effect: The new, stable core of authentication ---
@@ -274,7 +291,12 @@ function AppProviderContent({ children }: { children: ReactNode }) {
         } else {
           setCurrentUser(appUser);
           if (isPublicPage && appUser) { // Check appUser to be safe
-            router.push('/dashboard');
+            // Redirect Super Admins to their specific dashboard
+            if (appUser.isSuperAdmin) {
+              router.push('/super-admin');
+            } else {
+              router.push('/dashboard');
+            }
           }
         }
       } else {
@@ -323,12 +345,18 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     adminCredentials = { email, password };
     sessionStorage.setItem('admin_creds', JSON.stringify({ email, password }));
     console.log('✅ Admin credentials stored for user creation (memory + sessionStorage)');
+    
+    // Ensure session-only persistence before login
+    await setPersistence(auth, browserSessionPersistence);
     await signInWithEmailAndPassword(auth, email, password);
   };
   
   const signInWithGoogle = async () => {
     if (!auth || !firestore) throw new Error("Authentication service not available.");
 
+    // Ensure session-only persistence before Google sign-in
+    await setPersistence(auth, browserSessionPersistence);
+    
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
@@ -388,6 +416,7 @@ function AppProviderContent({ children }: { children: ReactNode }) {
   const reSignInAdmin = async () => {
     if (!auth || !adminCredentials) return;
     try {
+        await setPersistence(auth, browserSessionPersistence);
         await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
     } catch (error) {
         console.error("Failed to re-sign in admin", error);
@@ -434,6 +463,18 @@ function AppProviderContent({ children }: { children: ReactNode }) {
 
   const addResident = async (newResidentData: Omit<Resident, 'id' | 'userId' | 'avatarUrl' | 'address'> & { email: string }) => {
     if (!firestore || !auth) throw new Error("Firebase services are not available.");
+    if (!currentUser) throw new Error("You must be logged in to create residents.");
+    
+    // CRITICAL: Verify admin credentials are stored
+    const creds = getAdminCredentials();
+    if (!creds?.email || !creds?.password) {
+      console.error('❌ Admin credentials not found');
+      throw new Error("Session expired. Please log out and log back in to create residents.");
+    }
+    
+    // Update the global variable
+    adminCredentials = creds;
+    console.log('✅ Admin credentials verified:', creds.email);
     
     // Check if user already exists in Firestore
     const existingUsersQuery = query(collection(firestore, 'users'), where('email', '==', newResidentData.email), limit(1));
@@ -443,19 +484,31 @@ function AppProviderContent({ children }: { children: ReactNode }) {
       throw new Error("A user with this email already exists in the system.");
     }
     
+    // CRITICAL: Set lock to prevent auth state changes
+    isCreatingUser = true;
+    sessionStorage.setItem('creating_user', 'true');
+    console.log('🔒 Resident creation lock ENABLED (memory + sessionStorage)');
+    
     const defaultPassword = 'password';
-    const adminUser = auth.currentUser; // Keep track of the currently logged-in admin
+    const barangayId = currentUser.barangayId || 'default';
+    
+    console.log('=== Creating Resident ===');
+    console.log('Admin creating resident:', currentUser.email);
+    console.log('Admin barangayId:', currentUser.barangayId);
+    console.log('New resident email:', newResidentData.email);
+    console.log('New resident barangayId (MUST match admin):', barangayId);
 
     try {
+        // Step 1: Create the authentication account
         const userCredential = await createUserWithEmailAndPassword(auth, newResidentData.email, defaultPassword);
         const authUser = userCredential.user;
+        console.log('✅ Auth account created:', authUser.uid);
         
+        // Step 2: IMMEDIATELY create documents BEFORE any auth state changes
         const batch = writeBatch(firestore);
 
         const residentId = authUser.uid;
         const userId = `R-${authUser.uid.slice(0,6).toUpperCase()}`;
-
-        const barangayId = auth.currentUser?.uid ? (await getDoc(doc(firestore, 'users', auth.currentUser.uid))).data()?.barangayId || 'default' : 'default';
         
         const newResident: Resident = {
           ...newResidentData,
@@ -464,7 +517,7 @@ function AppProviderContent({ children }: { children: ReactNode }) {
           address: `${newResidentData.purok}, Brgy. Mina De Oro, Bongabong, Oriental Mindoro`,
           avatarUrl: `https://picsum.photos/seed/${residentId}/100/100`,
           email: newResidentData.email,
-          barangayId: barangayId, // Inherit barangay from admin
+          barangayId: barangayId,
         };
         const residentRef = doc(firestore, 'residents', residentId);
         batch.set(residentRef, newResident);
@@ -476,32 +529,81 @@ function AppProviderContent({ children }: { children: ReactNode }) {
           avatarUrl: newResident.avatarUrl,
           role: 'Resident',
           residentId: residentId,
-          barangayId: barangayId, // Inherit barangay from admin
+          barangayId: barangayId,
         };
         const userRef = doc(firestore, 'users', residentId);
         batch.set(userRef, newUser);
 
         await batch.commit();
-
-        // After creating the user, sign them out and sign the admin back in.
-        if (auth.currentUser?.uid === authUser.uid && adminUser) {
-            await signOut(auth);
-            if(adminCredentials) {
-              await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
-            }
+        console.log('✅ Resident documents created');
+        
+        // Step 3: Wait for Firestore write to propagate
+        console.log('⏳ Waiting for Firestore write to propagate...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Step 4: Sign out the new resident IMMEDIATELY
+        await signOut(auth);
+        console.log('✅ New resident signed out');
+        
+        // Step 5: Wait before re-auth
+        console.log('⏳ Preparing to re-authenticate admin...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Step 6: Re-authenticate as admin with session persistence
+        await setPersistence(auth, browserSessionPersistence);
+        await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
+        console.log('✅ Admin re-authenticated with session persistence');
+        
+        // Step 7: Wait for auth state to stabilize
+        console.log('⏳ Stabilizing auth state...');
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Step 8: Verify admin is properly authenticated before releasing lock
+        const currentAuthUser = auth.currentUser;
+        if (!currentAuthUser || currentAuthUser.email !== adminCredentials.email) {
+          console.error('❌ Admin not properly authenticated after resident creation');
+          throw new Error('Admin session not properly restored');
         }
+        console.log('✅ Admin session verified:', currentAuthUser.email);
+        
+        // Step 9: Release the lock
+        isCreatingUser = false;
+        sessionStorage.removeItem('creating_user');
+        console.log('🔓 Resident creation lock RELEASED');
+        
+        // Step 10: Force immediate reload to prevent any error pages
+        console.log('🔄 Forcing immediate page reload');
+        setTimeout(() => {
+          window.location.href = '/residents';
+        }, 100);
 
     } catch (error: any) {
-      // If the admin was signed out by the process, sign them back in
-      if (adminCredentials && auth.currentUser?.email !== adminCredentials.email) {
-          await reSignInAdmin();
-      }
-      
-      console.error("Error creating resident:", error);
-      if (error.code === 'auth/email-already-in-use') {
-          throw new Error("An account for this email already exists.");
-      }
-      throw new Error("Failed to create resident account.");
+        console.error('❌ Error creating resident:', error);
+        
+        // CRITICAL: Always release the lock, even on error
+        isCreatingUser = false;
+        sessionStorage.removeItem('creating_user');
+        console.log('🔓 Resident creation lock RELEASED (error recovery - memory + sessionStorage)');
+        
+        // Emergency recovery: Force admin back in
+        try {
+          await signOut(auth);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await setPersistence(auth, browserSessionPersistence);
+          await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          console.log('✅ Admin session recovered');
+        } catch (reAuthError) {
+          console.error('❌ Failed to recover admin session:', reAuthError);
+          // Last resort: reload page and force login
+          sessionStorage.removeItem('creating_user');
+          window.location.href = '/login';
+        }
+
+        if (error.code === 'auth/email-already-in-use') {
+            throw new Error("An account for this email already exists.");
+        }
+        throw new Error(error.message || 'Failed to create resident account');
     }
   };
 
@@ -651,114 +753,58 @@ function AppProviderContent({ children }: { children: ReactNode }) {
   };
 
   const addUser = async (user: Omit<User, 'id' | 'avatarUrl' | 'residentId'> & { password?: string }) => {
-    if (!firestore || !auth) throw new Error("Firebase services are not available.");
     if (!currentUser) throw new Error("You must be logged in to create users.");
-    
-    // CRITICAL: Verify admin credentials are stored (check both memory and sessionStorage)
-    const creds = getAdminCredentials();
-    if (!creds?.email || !creds?.password) {
-      console.error('❌ Admin credentials not found');
-      throw new Error("Session expired. Please log out and log back in to create users.");
-    }
-    
-    // Update the global variable
-    adminCredentials = creds;
-    console.log('✅ Admin credentials verified:', creds.email);
-    
-    // CRITICAL: Set lock to prevent auth state changes (both in memory and sessionStorage)
-    isCreatingUser = true;
-    sessionStorage.setItem('creating_user', 'true');
-    console.log('🔒 User creation lock ENABLED (memory + sessionStorage)');
     
     const password = user.password || 'password';
     const barangayId = user.barangayId || currentUser.barangayId || 'default';
     
-    console.log('=== Creating Staff User ===');
-    console.log('Role:', user.role);
-    console.log('Email:', user.email);
-    console.log('BarangayId:', barangayId);
+    console.log('=== Creating Staff User (Server-Side) ===');
+    console.log('Admin:', currentUser.email);
+    console.log('New user:', user.email, user.role);
+    
+    // Verify barangayId matches admin
+    if (barangayId !== currentUser.barangayId) {
+      throw new Error('BarangayId mismatch');
+    }
     
     try {
-        // Step 1: Create the authentication account
-        const userCredential = await createUserWithEmailAndPassword(auth, user.email, password);
-        const authUser = userCredential.user;
-        console.log('✅ Auth account created:', authUser.uid);
-        
-        // Step 2: IMMEDIATELY create user document BEFORE any auth state changes
-        const newUser: User = {
-          id: authUser.uid,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          barangayId: barangayId,
-          avatarUrl: `https://picsum.photos/seed/${authUser.uid}/100/100`,
-          isSuperAdmin: false,
-        };
-        
-        const userRef = doc(firestore, 'users', authUser.uid);
-        await setDoc(userRef, newUser);
-        console.log('✅ User document created with role:', newUser.role);
-        
-        // Step 3: Verify the document was written correctly
-        const verifyDoc = await getDoc(userRef);
-        if (verifyDoc.exists()) {
-          const savedData = verifyDoc.data();
-          console.log('✅ Verified saved role:', savedData.role);
-          if (savedData.role !== user.role) {
-            console.error('❌ Role mismatch! Expected:', user.role, 'Got:', savedData.role);
-          }
+        // Call server-side API to create user (NO client auth switching!)
+        const response = await fetch('/api/admin/create-staff', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: user.email,
+            password,
+            name: user.name,
+            role: user.role,
+            barangayId,
+            adminUid: currentUser.id,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create staff account');
         }
+
+        console.log('✅ Staff created successfully:', data.userId);
         
-        // Step 4: Wait to ensure Firestore write is complete and propagated
-        console.log('⏳ Waiting for Firestore write to propagate...');
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Show success message
+        toast({
+          title: 'Staff Account Created',
+          description: `${user.name} has been added successfully.`,
+        });
         
-        // Step 5: Sign out the new user IMMEDIATELY
-        await signOut(auth);
-        console.log('✅ New user signed out');
-        
-        // Step 6: Wait before re-auth
-        console.log('⏳ Preparing to re-authenticate admin...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Step 7: Re-authenticate as admin
-        await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
-        console.log('✅ Admin re-authenticated');
-        
-        // Step 8: Wait for auth state to stabilize
-        console.log('⏳ Stabilizing auth state...');
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
-        
-        // Step 9: Release the lock
-        isCreatingUser = false;
-        sessionStorage.removeItem('creating_user');
-        console.log('🔓 User creation lock RELEASED (memory + sessionStorage)');
+        // Reload to show new staff
+        setTimeout(() => {
+          window.location.href = '/users';
+        }, 500);
 
     } catch (error: any) {
-        console.error('❌ Error creating user:', error);
-        
-        // CRITICAL: Always release the lock, even on error
-        isCreatingUser = false;
-        sessionStorage.removeItem('creating_user');
-        console.log('🔓 User creation lock RELEASED (error recovery - memory + sessionStorage)');
-        
-        // Emergency recovery: Force admin back in
-        try {
-          await signOut(auth);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          console.log('✅ Admin session recovered');
-        } catch (reAuthError) {
-          console.error('❌ Failed to recover admin session:', reAuthError);
-          // Last resort: reload page and force login
-          sessionStorage.removeItem('creating_user');
-          window.location.href = '/login';
-        }
-
-        if (error.code === 'auth/email-already-in-use') {
-            throw new Error("An account for this email already exists.");
-        }
+        console.error('❌ Error:', error);
         throw new Error(error.message || 'Failed to create user account');
     }
   };
