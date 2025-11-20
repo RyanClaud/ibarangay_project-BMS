@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Shield, UserCog } from 'lucide-react';
 import { AddUserDialog } from '@/components/users/add-user-dialog';
 import { EditUserDialog } from '@/components/users/edit-user-dialog';
+import { CreatingUserOverlay } from '@/components/users/creating-user-overlay';
 import type { User } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -108,7 +109,9 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <CreatingUserOverlay isCreating={isCreatingUser} />
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">Staff & Users</h1>
@@ -256,32 +259,22 @@ export default function UsersPage() {
           setIsAddDialogOpen(false);
           
           try {
-            // Start the user creation process (this will set the lock)
-            // Don't await yet - let it run in background
-            const userCreationPromise = addUser(userData);
-            
-            // CRITICAL: Redirect to isolated loading page immediately
-            // This prevents queries from running while user is being created
-            router.push('/creating-user');
-            
-            // Now wait for user creation to complete
-            await userCreationPromise;
+            // Create user - the overlay will handle the loading state
+            await addUser(userData);
             setLastCreationTime(Date.now());
             
-            // Success - the loading page will redirect back automatically
+            // Success - overlay will detect completion and reload
             console.log('✅ User creation complete');
           } catch (error: any) {
-            // On error, clear the lock and go back
+            // On error, clear the lock and hide overlay
             sessionStorage.removeItem('creating_user');
-            router.push('/settings?tab=users');
+            setIsCreatingUser(false);
             
             toast({
               title: 'Failed to Create User',
               description: error.message || 'An error occurred while creating the user.',
               variant: 'destructive',
             });
-          } finally {
-            setIsCreatingUser(false);
           }
         }}
         isCreating={isCreatingUser}
@@ -299,5 +292,6 @@ export default function UsersPage() {
         />
       )}
     </div>
+    </>
   );
 }
