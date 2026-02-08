@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/Status-Production_Ready-success?style=for-the-badge" alt="Status">
 </p>
 
 <p align="center">
@@ -22,6 +23,8 @@
 ---
 
 > **🔒 SECURITY NOTICE:** This repository does not include sensitive configuration files. See [SECURITY_SETUP.md](SECURITY_SETUP.md) for required setup steps and configuration files you need to create locally.
+
+> **🚀 DEPLOYMENT:** For deployment instructions and environment variable setup, see [DEPLOYMENT_ENVIRONMENT_VARIABLES.md](DEPLOYMENT_ENVIRONMENT_VARIABLES.md)
 
 ---
 
