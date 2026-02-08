@@ -48,7 +48,7 @@ firestore-debug.log
 *.md
 !README.md
 
-# Sensitive configuration files
+# Sensitive configuration files (keep config.ts but protect with env vars)
 .firebaserc
 firebase.json
 firestore.rules
@@ -62,9 +62,6 @@ apphosting.yaml
 
 # CSV data files (may contain sensitive information)
 *.csv
-
-# Firebase configuration (contains API keys)
-src/firebase/config.ts
 
 # Public HTML utilities (may contain sensitive scripts)
 public/*.html
