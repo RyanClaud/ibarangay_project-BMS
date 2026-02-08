@@ -6,9 +6,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   devIndicators: false,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // eslint config moved to .eslintrc.json
   images: {
     remotePatterns: [
       {
@@ -30,6 +28,11 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  experimental: {
+    turbo: {
+      root: process.cwd(),
+    },
   },
 };
 
