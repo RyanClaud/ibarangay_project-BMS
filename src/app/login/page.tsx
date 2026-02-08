@@ -23,6 +23,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Email/password authentication only - Google auth removed
+
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsProcessingLogin(true);
