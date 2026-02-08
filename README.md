@@ -21,6 +21,10 @@
 
 ---
 
+> **🔒 SECURITY NOTICE:** This repository does not include sensitive configuration files. See [SECURITY_SETUP.md](SECURITY_SETUP.md) for required setup steps and configuration files you need to create locally.
+
+---
+
 ## ✨ Key Features
 
 ### 🎯 Core Functionality
@@ -38,7 +42,7 @@
 -   **🤖 AI-Powered Analytics** - Google Gemini AI integration for data insights and trend analysis
 -   **📊 Custom Reports** - Generate PDF/Excel reports using natural language descriptions
 -   **📄 PDF Generation** - Automatic creation of official certificates with barangay seals
--   **🔐 Secure Authentication** - Email/password and Google Sign-In with password reset
+-   **🔐 Secure Authentication** - Email/password authentication with password reset
 -   **🎨 Modern UI/UX** - Gradient designs, smooth animations, and intuitive navigation
 -   **🌙 Dark Mode** - Full dark mode support throughout the application
 -   **📧 Email Notifications** - Automated status updates for document requests
@@ -67,6 +71,8 @@ The system is built with a sophisticated role-based access model to ensure that 
 
 ### Installation
 
+> **⚠️ IMPORTANT:** Before starting, read [SECURITY_SETUP.md](SECURITY_SETUP.md) for required configuration files.
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
@@ -80,24 +86,37 @@ The system is built with a sophisticated role-based access model to ensure that 
 
 3. **Configure Firebase**
    - Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-   - Enable Authentication (Email/Password and Google)
+   - Enable Authentication (Email/Password)
    - Create a Firestore database
    - Enable Storage
-   - Copy your config to `src/firebase/config.ts`
+   - **Follow [SECURITY_SETUP.md](SECURITY_SETUP.md) to create required configuration files:**
+     - `src/firebase/config.ts` (copy from `config.example.ts`)
+     - `.firebaserc`
+     - `firebase.json`
+     - `firestore.rules`
+     - `storage.rules`
 
 4. **Set up environment variables**
    ```bash
-   # Create .env.local file
+   # Create .env.local file (see SECURITY_SETUP.md for details)
+   FIREBASE_PROJECT_ID=your-project-id
+   FIREBASE_CLIENT_EMAIL=your-service-account-email
+   FIREBASE_PRIVATE_KEY="your-private-key"
    GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
-5. **Run development server**
+5. **Deploy Firebase rules**
+   ```bash
+   firebase deploy --only firestore:rules,storage
+   ```
+
+6. **Run development server**
    ```bash
    npm run dev
    ```
    Open [http://localhost:9002](http://localhost:9002)
 
-6. **Initial Setup**
+7. **Initial Setup**
    - Visit `/initial-setup` to create your super admin account
    - Login and start adding barangays
 

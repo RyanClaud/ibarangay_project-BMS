@@ -47,3 +47,24 @@ firestore-debug.log
 # Documentation files (exclude all .md files except README.md)
 *.md
 !README.md
+
+# Sensitive configuration files
+.firebaserc
+firebase.json
+firestore.rules
+storage.rules
+firestore.indexes.json
+apphosting.yaml
+
+# Setup and configuration text files
+*.txt
+!robots.txt
+
+# CSV data files (may contain sensitive information)
+*.csv
+
+# Firebase configuration (contains API keys)
+src/firebase/config.ts
+
+# Public HTML utilities (may contain sensitive scripts)
+public/*.html
