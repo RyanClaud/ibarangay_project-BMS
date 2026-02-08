@@ -1,6 +1,5 @@
 'use client';
 
-import { FcGoogle } from 'react-icons/fc';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +15,7 @@ import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, signInWithGoogle } = useAppContext();
+  const { login } = useAppContext();
   const { user: authenticatedUser, isLoading: isAuthLoading } = useAppAuth();
   const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
@@ -51,16 +50,6 @@ export default function LoginPage() {
           variant: 'destructive',
       });
     } finally {
-      setIsProcessingLogin(false);
-    }
-  };
-  
-  const handleGoogleSignIn = async () => {
-    setIsProcessingLogin(true);
-    try {
-      await signInWithGoogle();
-      // The context's useEffect will handle the redirect
-    } catch (error) {
       setIsProcessingLogin(false);
     }
   };
@@ -219,30 +208,8 @@ export default function LoginPage() {
                   )}
                 </Button>
 
-                {/* Divider */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-white/20" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-transparent px-3 text-white/60 font-medium">Or continue with</span>
-                  </div>
-                </div>
-
-                {/* Google Sign In */}
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  className="w-full h-12 bg-white/10 hover:bg-white/20 text-white border-white/30 hover:border-white/50 font-semibold transform hover:scale-[1.02] transition-all duration-300" 
-                  onClick={handleGoogleSignIn} 
-                  disabled={isLoading}
-                >
-                  <FcGoogle className="mr-2 h-5 w-5" /> 
-                  Sign in with Google
-                </Button>
-
                 {/* Register Link */}
-                <div className="flex flex-col gap-2 text-sm text-center text-white/70">
+                <div className="flex flex-col gap-2 text-sm text-center text-white/70 pt-2">
                   <p>
                     Resident?{' '}
                     <Link 
