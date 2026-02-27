@@ -82,6 +82,35 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Ensure proper mobile scaling */
+  html {
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Prevent horizontal overflow on mobile */
+  body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+  
+  /* Ensure all containers are responsive */
+  * {
+    max-width: 100%;
+  }
+  
+  /* Fix for tables on mobile */
+  table {
+    @apply w-full;
+  }
+  
+  /* Ensure images are responsive */
+  img {
+    @apply max-w-full h-auto;
+  }
 }
 
 @layer components {
@@ -166,5 +195,104 @@
   }
   main {
     padding: 0;
+  }
+}
+
+/* Mobile Responsive Utilities */
+@layer utilities {
+  /* Responsive text sizes */
+  .text-responsive {
+    @apply text-sm md:text-base lg:text-lg;
+  }
+  
+  /* Responsive padding */
+  .p-responsive {
+    @apply p-2 sm:p-4 md:p-6 lg:p-8;
+  }
+  
+  /* Responsive containers */
+  .container-responsive {
+    @apply w-full px-4 sm:px-6 md:px-8 lg:px-12;
+  }
+  
+  /* Prevent text overflow */
+  .text-ellipsis-mobile {
+    @apply truncate sm:whitespace-normal;
+  }
+  
+  /* Responsive grid */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+  }
+  
+  /* Mobile-friendly buttons */
+  .btn-mobile {
+    @apply min-h-[44px] min-w-[44px] touch-manipulation;
+  }
+  
+  /* Scrollable tables on mobile */
+  .table-responsive {
+    @apply block overflow-x-auto whitespace-nowrap sm:whitespace-normal;
+  }
+}
+
+/* Mobile-specific fixes */
+@media (max-width: 640px) {
+  /* Ensure cards stack properly */
+  .card-grid {
+    @apply grid-cols-1 !important;
+  }
+  
+  /* Make dialogs full-screen on mobile */
+  [role="dialog"] {
+    @apply max-w-[95vw] max-h-[90vh];
+  }
+  
+  /* Adjust font sizes for mobile */
+  h1 {
+    @apply text-2xl;
+  }
+  
+  h2 {
+    @apply text-xl;
+  }
+  
+  h3 {
+    @apply text-lg;
+  }
+  
+  /* Ensure buttons are touch-friendly */
+  button, a {
+    @apply min-h-[44px];
+  }
+  
+  /* Fix table overflow */
+  table {
+    @apply text-xs;
+  }
+  
+  /* Reduce padding on mobile */
+  .container {
+    @apply px-4;
+  }
+}
+
+/* Tablet-specific adjustments */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container {
+    @apply px-6;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  button, a, input, select, textarea {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Remove hover effects on touch devices */
+  *:hover {
+    @apply transition-none;
   }
 }
