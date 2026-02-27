@@ -54,36 +54,20 @@ Environment: Production, Preview, Development (select all)
 #### Variable 3: FIREBASE_PRIVATE_KEY
 ```
 Name: FIREBASE_PRIVATE_KEY
-Value: -----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCfnxhrlkTH5TTG
-YSBjUNd9p42dl8xBA4wrweUtQ4FL1aHagHPfMM8Xc1c601n1WQpsemDfUA0/yInA
-JIiJIgqn4Ru3dBu942saTGT5tND5Mrv4Es/I0DWBiBqikoD0ma4JCALI13Mxz4cD
-+8wCVEmMovkMYCs8guOWUIhUCgis3hQpnZx+9QN6xN7yLpTWT/YaG1RUM/OF5ns8
-CTGuP/a+8YfVWjQfUa3bdEl9D21gnoMs6UjIeT7D2X/SJcWce/tTLt1ysHapOUJj
-pOqq5eBY/r1Wf7L2xC4Y9ZdewKJHejvLtdDXlTQjueZdnDdjM7kIy/u3DTw3IC6C
-cbaIRfNJAgMBAAECggEABYf+0aOYaJDhvkoZVDe17+3Bc4eSFWKpFc8XQPVI4rbZ
-b/fpi/9l/bsKd8hhIqZePRoUh0h/3Qj29QiPDql2UxDy4+2LFI5v5K5nBVwlraz7
-ZIJKXvwQDpgHzEBlZZR5umhjqFAG9t/pHtM345DGJ7ByDuK6PNOQTWInBzp9yHev
-mDPL962kTzwDRAE5cvp3inWeC4G0onxOninmrQX6Scg7z1iuSZKCHWZkdsEulwEo
-Glef45+dwT5N6Kb80wMnBuYt1eajvL8n6FwKhilzmcGW8RtJA+LojUf9Te6ZSwS+
-rkaOO1Xgxg9cK3Xse9JagPsMSGWCME7mgzGuw7cIgQKBgQDRxcI5iR07lQBpLQey
-1X6yHwvsBydAuvnRZtfSDyJVJufMwu4HbPsXTMSW5a85jNH7NnVUmAUNiHBLmOQd
-ShBfhKwDpPTX2QgMJt9NQZTqKJjRkwFb6IenTDPaYLO/TiKphDhkEjZvzbTGl6ZX
-pWd0whPk1Rx+lCAiPnjsY81LkQKBgQDCzBWIq3zs4rAAFSHCTe5nKM8Y0L3GRc1Q
-Y2ToQOqICEEDJqhpUIPwaPqQFKdn/5CpYtAjKvxvXBg/87dm8OpOzyoNiSRiH5Aq
-dLCMXe8Ho1tb2OLD0Qj2JsN50RVtq3HB9by4Ml0QUfJiwKbcDNZDOVrywqBNKDtc
-oNX2ST4gOQKBgDO43gXPr/yD5aEJME/A4kdK7maY8O297GDcSbSKdL2oJRlQqt37
-2gFJtWM7aLP468FUESP1g7FthbquDPjHzTev/7W6U4BxC9HrN73VwMDnl55876XY
-tLHkURi0JT2zJ0rCxiCueOuiPcOFmscbimG4hK00ep0fKrkmzCwFA5ZxAoGAV5dn
-M25RHT+NfmwCIxnh0ncyMGlkfCxU9wnKjPjrvMFhYmZWogx3V3oM+Q6gfA4Z4WCy
-UK36lqRlrxQK6vn3kfprYWzCdHDW5ZBU9rkiS1/0K6epx/1Nt0mU6kjPBuJpo5q5
-AmZ7HGSMxkT0gswu6El5EOHdLPSjRLJ5o2YpzlkCgYEAnJhSZg3+mPidLtKVtI8e
-d4rR5aOFc0zxKXMGu2tPyfgFlDmImHy8RyOckgTtY1uLbKw8ufMcplyvz12HWXW6
-sybnaVJi7npECBmLtzIEo8Hx/RuE9DDDGYD69578otRyrnSrcenrMId4OViqJ1CU
-jzGI4iUgugVpTFCo5L/i6+U=
------END PRIVATE KEY-----
+Value: [GET FROM FIREBASE CONSOLE - See instructions below]
 Environment: Production, Preview, Development (select all)
 ```
+
+**How to get your Firebase Private Key:**
+1. Go to Firebase Console: https://console.firebase.google.com
+2. Select your project
+3. Settings → Service Accounts
+4. Click "Generate New Private Key"
+5. Download the JSON file
+6. Copy the "private_key" value from the JSON
+7. Paste it in Vercel (include -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY-----)
+
+**IMPORTANT:** Never share or commit your private key!
 
 **IMPORTANT for FIREBASE_PRIVATE_KEY:**
 - Copy the ENTIRE private key including `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----`
