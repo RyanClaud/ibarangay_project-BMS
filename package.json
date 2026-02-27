@@ -6,13 +6,14 @@
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "cleanup:duplicates": "tsx src/scripts/remove-duplicate-now.ts"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@genkit-ai/google-genai": "^1.20.0",
     "@genkit-ai/next": "^1.20.0",
     "@hookform/resolvers": "^4.1.3",
@@ -50,6 +51,7 @@
     "jspdf-autotable": "^3.8.2",
     "lucide-react": "^0.475.0",
     "next": "^16.1.6",
+    "next-pwa": "^5.6.0",
     "next-themes": "^0.3.0",
     "patch-package": "^8.0.0",
     "ph-geo-admin-divisions": "^1.0.8",

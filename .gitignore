@@ -65,3 +65,12 @@ apphosting.yaml
 
 # Public HTML utilities (may contain sensitive scripts)
 public/*.html
+!public/offline.html
+
+# PWA files
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+public/sw.js.map
+public/workbox-*.js.map
+public/worker-*.js.map

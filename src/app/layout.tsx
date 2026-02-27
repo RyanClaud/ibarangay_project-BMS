@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { AppProvider } from "@/contexts/app-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GlobalErrorInterceptor } from "@/components/global-error-interceptor";
+import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 
 const ptSans = PT_Sans({
   subsets: ["latin"],
@@ -23,10 +24,26 @@ const playfairDisplay = Playfair_Display({
 export const metadata: Metadata = {
   title: "iBarangay - Community Management",
   description: "Modernizing Community Management. Efficiently. Effectively.",
+  manifest: "/manifest.json",
   icons: {
     icon: "/icon.png", // Specifies the primary icon
     shortcut: "/icon.png", // Specifies the shortcut icon
     apple: "/icon.png", // Specifies the Apple touch icon
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "iBarangay",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  themeColor: "#1e3a8a",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
   },
 };
 
@@ -42,6 +59,7 @@ export default function RootLayout({
           <AppProvider>
             <GlobalErrorInterceptor />
             {children}
+            <PWAInstallPrompt />
           </AppProvider>
         </ThemeProvider>
         <Toaster />
