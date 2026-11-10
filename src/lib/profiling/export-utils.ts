@@ -94,25 +94,23 @@ export function exportMasterlistExcel(
   barangayName: string,
   filtersApplied: string,
 ): void {
-  const rows = buildMasterlistRows(residents);
-  const ws = XLSX.utils.aoa_to_sheet([MASTERLIST_COLUMNS, ...rows]);
+  const dataRows = buildMasterlistRows(residents);
+
+  // Build all rows together: title block → blank → headers → data
+  const titleRows: (string | number)[][] = [
+    [`${barangayName.toUpperCase()} — BARANGAY MASTERLIST`],
+    [`Generated: ${new Date().toLocaleString("en-PH")}`],
+    ...(filtersApplied ? [[`Filters: ${filtersApplied}`]] : []),
+    [], // blank spacer row
+  ];
+
+  const allRows = [...titleRows, MASTERLIST_COLUMNS, ...dataRows];
+  const ws = XLSX.utils.aoa_to_sheet(allRows);
 
   // Set column widths
   ws["!cols"] = MASTERLIST_COLUMNS.map((col) => ({
-    wch: Math.max(col.length + 2, 12),
+    wch: Math.max(col.length + 2, 14),
   }));
-
-  // Add a title row at the top
-  XLSX.utils.sheet_add_aoa(
-    ws,
-    [
-      [`${barangayName.toUpperCase()} — BARANGAY MASTERLIST`],
-      [`Generated: ${new Date().toLocaleString("en-PH")}`],
-      filtersApplied ? [`Filters: ${filtersApplied}`] : [],
-      [],
-    ],
-    { origin: "A1" },
-  );
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Masterlist");

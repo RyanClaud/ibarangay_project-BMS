@@ -36,6 +36,7 @@ import {
   Home,
   BarChart3,
   ShieldCheck,
+  PlusCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useAppContext } from "@/contexts/app-context";
@@ -49,9 +50,7 @@ import {
   exportReportExcel,
   downloadImportTemplate,
 } from "@/lib/profiling/export-utils";
-import {
-  logAudit,
-} from "@/lib/profiling/audit";
+import { logAudit } from "@/lib/profiling/audit";
 import {
   SECTOR_TAGS,
   PROGRAM_NAMES,
@@ -64,8 +63,6 @@ import {
   canExportExcel,
   canExportPdf,
   canImportData,
-  canViewVoterInfo,
-  canViewIncome,
   getHiddenFieldGroups,
 } from "@/lib/profiling/access-control";
 import type {
@@ -76,9 +73,18 @@ import type {
   VoterStatus,
   Sex,
   IndividualStatus,
+  Household,
 } from "@/lib/profiling/types";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { useFirebase } from "@/firebase";
+import { toast } from "@/hooks/use-toast";
+import { AddIndividualDialog } from "./add-individual-dialog";
+import { AddHouseholdDialog } from "./add-household-dialog";
 
 const DEFAULT_FILTER: ProfilingFilter = {
   purok: null,
@@ -107,6 +113,10 @@ export function ProfilingClientPage() {
 
   const [filter, setFilter] = React.useState<ProfilingFilter>(DEFAULT_FILTER);
   const [activeReport, setActiveReport] = React.useState<string>("all");
+
+  // ── Add dialogs state ──
+  const [isAddIndividualOpen, setIsAddIndividualOpen] = React.useState(false);
+  const [isAddHouseholdOpen, setIsAddHouseholdOpen] = React.useState(false);
 
   // ── Filtering logic ──
   const filteredResidents = React.useMemo(() => {
@@ -240,6 +250,50 @@ export function ProfilingClientPage() {
     }
   };
 
+  // ── Save handlers ──
+  const handleSaveIndividual = async (
+    data: Omit<ProfilingResident, "id" | "userId" | "avatarUrl" | "email">,
+  ) => {
+    if (!firestore || !barangayId) return;
+    const newId = `PROF-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await setDoc(doc(firestore, "residents", newId), {
+      ...data,
+      id: newId,
+      userId: newId,
+      avatarUrl: "",
+      email: "",
+    });
+    await logAudit(
+      { firestore, barangayId, userId: currentUser!.id, userName: currentUser!.name, userRole: role ?? "" },
+      "create", "individual", newId,
+      `Added individual: ${data.firstName} ${data.lastName}`,
+    );
+    toast({ title: "Individual added", description: `${data.firstName} ${data.lastName} has been added to the masterlist.` });
+  };
+
+  const handleSaveHousehold = async (
+    data: Omit<Household, "createdAt" | "updatedAt" | "createdBy" | "updatedBy" | "consentObtained" | "consentDate" | "qrCodeDataUrl">,
+  ) => {
+    if (!firestore || !barangayId) return;
+    const now = new Date().toISOString();
+    await setDoc(doc(firestore, "households", data.id), {
+      ...data,
+      consentObtained: true,
+      consentDate: now.split("T")[0],
+      qrCodeDataUrl: null,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: currentUser?.id ?? "",
+      updatedBy: currentUser?.id ?? "",
+    });
+    await logAudit(
+      { firestore, barangayId, userId: currentUser!.id, userName: currentUser!.name, userRole: role ?? "" },
+      "create", "household", data.id,
+      `Added household: ${data.id} — ${data.householdHeadName}`,
+    );
+    toast({ title: "Household added", description: `Household ${data.id} has been registered.` });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -319,6 +373,15 @@ export function ProfilingClientPage() {
 
         {/* ── MASTERLIST TAB ── */}
         <TabsContent value="masterlist" className="space-y-4">
+          {/* Add button */}
+          {canEditData(role, isSuperAdmin) && (
+            <div className="flex justify-end">
+              <Button onClick={() => setIsAddIndividualOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Individual
+              </Button>
+            </div>
+          )}
           {/* Filter Bar */}
           <Card>
             <CardHeader className="pb-3">
@@ -637,6 +700,12 @@ export function ProfilingClientPage() {
               <strong>{totalHouseholds}</strong> households registered
             </p>
             <div className="flex gap-2">
+              {canEditData(role, isSuperAdmin) && (
+                <Button onClick={() => setIsAddHouseholdOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Household
+                </Button>
+              )}
               {canExportExcel(role, isSuperAdmin) && (
                 <Button variant="outline" size="sm" onClick={handleExportHouseholdsExcel}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -1019,6 +1088,27 @@ export function ProfilingClientPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ── Dialogs ── */}
+      <AddIndividualDialog
+        isOpen={isAddIndividualOpen}
+        onClose={() => setIsAddIndividualOpen(false)}
+        barangayId={barangayId ?? ""}
+        barangayName={barangayName}
+        puroks={puroks}
+        households={households}
+        onSave={handleSaveIndividual}
+      />
+
+      <AddHouseholdDialog
+        isOpen={isAddHouseholdOpen}
+        onClose={() => setIsAddHouseholdOpen(false)}
+        barangayId={barangayId ?? ""}
+        barangayName={barangayName}
+        puroks={puroks}
+        nextSequence={households.length + 1}
+        onSave={handleSaveHousehold}
+      />
     </div>
   );
 }
