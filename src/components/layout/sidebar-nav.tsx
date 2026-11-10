@@ -23,7 +23,8 @@ import {
   LogOut,
   FileSignature,
   Loader2,
-  Building2
+  Building2,
+  ClipboardList
 } from 'lucide-react';
 import { useAppContext } from '@/contexts/app-context';
 import { useEffect, useState } from 'react';
@@ -35,6 +36,7 @@ const navItems = {
   Admin: [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/residents', icon: Users, label: 'Residents' },
+    { href: '/profiling', icon: ClipboardList, label: 'Barangay Profiling' },
     { href: '/users', icon: UserCog, label: 'Staff & Users' },
     { href: '/documents', icon: FileSignature, label: 'Documents' },
     { href: '/payments', icon: CircleDollarSign, label: 'Payments' },
@@ -53,6 +55,7 @@ const navItems = {
   'Barangay Captain': [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/residents', icon: Users, label: 'Residents' },
+    { href: '/profiling', icon: ClipboardList, label: 'Barangay Profiling' },
     { href: '/documents', icon: FileSignature, label: 'Documents' },
     { href: '/reports', icon: BarChart3, label: 'Reports' },
     { href: '/settings', icon: Settings, label: 'Settings' },
@@ -60,13 +63,25 @@ const navItems = {
   Secretary: [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/residents', icon: Users, label: 'Residents' },
+    { href: '/profiling', icon: ClipboardList, label: 'Barangay Profiling' },
     { href: '/documents', icon: FileSignature, label: 'Documents' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ],
   Treasurer: [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/payments', icon: CircleDollarSign, label: 'Payments' },
+    { href: '/profiling', icon: ClipboardList, label: 'Barangay Profiling' },
     { href: '/reports', icon: BarChart3, label: 'Reports' },
+    { href: '/settings', icon: Settings, label: 'Settings' },
+  ],
+  BHW: [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/profiling', icon: ClipboardList, label: 'Barangay Profiling' },
+    { href: '/settings', icon: Settings, label: 'Settings' },
+  ],
+  Encoder: [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/profiling', icon: ClipboardList, label: 'Barangay Profiling' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ],
   Resident: [

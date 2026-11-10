@@ -1,4 +1,4 @@
-export type Role = "Admin" | "Barangay Captain" | "Secretary" | "Treasurer" | "Resident";
+export type Role = "Admin" | "Barangay Captain" | "Secretary" | "Treasurer" | "BHW" | "Encoder" | "Resident";
 
 export type DocumentPricing = {
   "Barangay Clearance": number;
