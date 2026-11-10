@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, CheckCircle2, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useAppContext } from '@/contexts/app-context';
 import Image from 'next/image';
 
@@ -33,16 +33,18 @@ export default function ForgotPasswordPage() {
 
     try {
       await sendPasswordReset(email);
-      setIsSubmitted(true); // Show success message
+      setIsSubmitted(true);
     } catch (error: any) {
       let description = 'An unknown error occurred. Please try again.';
       if (error.code === 'auth/invalid-email') {
         description = 'The email address you entered is not valid.';
+      } else if (error.code === 'auth/user-not-found') {
+        description = 'No account found with this email address.';
       }
       toast({
-          title: 'Request Failed',
-          description: description,
-          variant: 'destructive',
+        title: 'Reset Request Failed',
+        description: description,
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -50,140 +52,149 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-700 to-orange-600"></div>
-      
-      {/* Animated Shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
-
-      {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
-
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          
-          {/* Logo Section */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className="relative bg-white/95 backdrop-blur-xl p-6 rounded-full border-4 border-white/50 shadow-2xl">
-              <Image 
-                src="/icon.png" 
-                alt="iBarangay Logo" 
-                width={80} 
-                height={80} 
-                className="object-contain drop-shadow-lg"
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col justify-between selection:bg-[#246BDE] selection:text-white">
+      {/* Top Header Bar */}
+      <header className="bg-[#102D56] text-white border-b border-white/10 py-3.5 px-4 sm:px-6">
+        <div className="container mx-auto max-w-5xl flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+            <div className="relative flex size-10 items-center justify-center rounded-full bg-white/10 ring-2 ring-yellow-400/50 shrink-0 overflow-hidden shadow-sm">
+              <img
+                src="/images/barangay-seal.png"
+                alt="iBarangay Official Seal"
+                className="size-10 object-contain"
               />
             </div>
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl font-bold font-headline text-white drop-shadow-2xl">
-                Password Recovery
-              </h1>
-              <p className="text-white/80 text-sm">
-                DICT MIMAROPA - Oriental Mindoro
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold tracking-tight text-white leading-none">
+                  iBarangay
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#246BDE] text-white uppercase tracking-wider">
+                  Security
+                </span>
+              </div>
+              <p className="text-[11px] text-white/70 leading-tight mt-0.5">
+                DICT MIMAROPA • Municipality of Bongabong
               </p>
             </div>
-          </div>
+          </Link>
 
-          {/* Reset Card */}
-          <Card className="bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-            
-            <CardHeader className="relative space-y-1">
-              <CardTitle className="text-2xl font-bold text-white">
-                {isSubmitted ? 'Check Your Email' : 'Reset Password'}
-              </CardTitle>
-              <CardDescription className="text-white/70">
-                {isSubmitted 
-                  ? "We've sent you instructions to reset your password." 
-                  : "Enter your email address and we'll send you a reset link."
-                }
-              </CardDescription>
-            </CardHeader>
+          <Link href="/login" className="text-xs text-white/80 hover:text-white font-medium flex items-center gap-1 transition-colors">
+            <ArrowLeft className="size-3.5" />
+            <span>Back to Sign In</span>
+          </Link>
+        </div>
+      </header>
 
-            {isSubmitted ? (
-              <CardContent className="relative space-y-4">
-                <div className="flex flex-col items-center justify-center p-8 space-y-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl"></div>
-                    <div className="relative bg-green-500/20 p-4 rounded-full">
-                      <CheckCircle className="h-16 w-16 text-green-400" />
-                    </div>
-                  </div>
-                  <div className="text-center space-y-2">
-                    <p className="font-medium text-white">Email Sent Successfully!</p>
-                    <p className="text-sm text-white/70">
-                      If an account exists with <span className="font-semibold text-orange-300">{email}</span>, you'll receive password reset instructions shortly.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            ) : (
-              <form onSubmit={handleResetRequest}>
-                <CardContent className="relative space-y-5 pt-2">
-                  <div className="space-y-2 group">
-                    <Label htmlFor="email" className="text-white/90 font-medium">Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50 group-focus-within:text-orange-400 transition-colors" />
-                      <Input 
-                        id="email" 
-                        type="email"
-                        placeholder="admin@ibarangay.com" 
-                        required 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        disabled={isLoading}
-                        className="pl-11 bg-white/10 border-white/30 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-orange-400/50 transition-all duration-300 h-12"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="relative flex-col gap-4 pt-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Sending Reset Link...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="mr-2 h-5 w-5" />
-                        Send Reset Link
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            )}
-
-            <CardFooter className="relative">
-              <Button 
-                variant="ghost" 
-                className="w-full text-white/80 hover:text-white hover:bg-white/10 transition-colors" 
-                asChild
-              >
-                <Link href="/login">
-                  <ArrowLeft className="mr-2 h-4 w-4" /> 
-                  Back to Login
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Footer */}
+      {/* Main Workspace */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        <div className="w-full max-w-md bg-white rounded-3xl border border-[#E5EAF2] shadow-xl overflow-hidden p-6 sm:p-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          
           <div className="text-center space-y-2">
-            <p className="text-white/60 text-xs">
-              Powered by DICT MIMAROPA Region IV-B
+            <div className="size-16 rounded-full bg-[#EAF2FF] text-[#246BDE] mx-auto flex items-center justify-center mb-2">
+              <Mail className="size-8 text-[#246BDE]" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-[#172B4D]">
+              {isSubmitted ? 'Check Your Inbox' : 'Reset Your Password'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#718096] leading-relaxed">
+              {isSubmitted
+                ? `We have dispatched a secure password reset link to ${email}. Check your email inbox or spam folder.`
+                : 'Enter your registered email address and we will send you instructions to recover your account.'}
             </p>
           </div>
+
+          {isSubmitted ? (
+            <div className="space-y-4">
+              <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl p-4 text-center space-y-2">
+                <CheckCircle2 className="size-6 text-[#10A875] mx-auto" />
+                <p className="text-xs font-semibold text-[#10A875]">
+                  Password reset link sent successfully!
+                </p>
+                <p className="text-[11px] text-[#718096]">
+                  Follow the instructions in the email to choose a new password.
+                </p>
+              </div>
+
+              <div className="pt-2 space-y-2">
+                <Link href="/login">
+                  <Button className="w-full h-11 rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold text-sm shadow-md">
+                    Return to Sign In
+                  </Button>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitted(false)}
+                  className="w-full text-center text-xs text-[#718096] hover:text-[#172B4D] font-medium py-1"
+                >
+                  Did not receive an email? Click to retry
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleResetRequest} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-bold text-[#172B4D]">
+                  Registered Email Address
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#718096]" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="e.g. resident@gmail.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="h-11 pl-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-11 rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold text-sm shadow-md hover:shadow-lg transition-transform hover:scale-[1.01] gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Sending Reset Link...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Reset Instructions</span>
+                    <ArrowRight className="size-4" />
+                  </>
+                )}
+              </Button>
+
+              <div className="text-center pt-2">
+                <Link
+                  href="/login"
+                  className="text-xs font-semibold text-[#246BDE] hover:underline"
+                >
+                  Remembered your password? Back to Login
+                </Link>
+              </div>
+            </form>
+          )}
+
+          <div className="pt-4 border-t border-[#E5EAF2] flex items-center justify-between text-[11px] text-[#718096]">
+            <span className="flex items-center gap-1">
+              <ShieldCheck className="size-3 text-emerald-600" />
+              Secure Identity Verification
+            </span>
+            <span>RA 10173 Protected</span>
+          </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="py-4 text-center text-xs text-[#718096] border-t border-[#E5EAF2] bg-white">
+        <p>© 2026 iBarangay System • Developed by Ryan Claud • DICT MIMAROPA Region IV-B</p>
+      </footer>
     </div>
   );
 }

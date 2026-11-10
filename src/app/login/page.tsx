@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, CheckCircle2, Building2 } from 'lucide-react';
 import { useAuth as useAppAuth } from '@/hooks/use-auth';
 import { useAppContext } from '@/contexts/app-context';
 import Image from 'next/image';
@@ -21,7 +21,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isProcessingLogin, setIsProcessingLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
   // Prefill email from query parameter if directed from registration or password reset
   useEffect(() => {
@@ -32,8 +31,6 @@ export default function LoginPage() {
       }
     }
   }, []);
-
-  // Email/password authentication only - Google auth removed
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -47,19 +44,22 @@ export default function LoginPage() {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
-          description = 'Invalid credentials. Please try again.';
+          description = 'Invalid email or password. Please verify your credentials and try again.';
           break;
         case 'auth/invalid-email':
-          description = 'The email address is not valid.';
+          description = 'The email address provided is not valid.';
+          break;
+        case 'auth/too-many-requests':
+          description = 'Too many failed login attempts. Please try again after a few minutes.';
           break;
         default:
           description = error.message || 'Please check your credentials and try again.';
           break;
       }
       toast({
-          title: 'Login Failed',
-          description: description,
-          variant: 'destructive',
+        title: 'Authentication Failed',
+        description: description,
+        variant: 'destructive',
       });
     } finally {
       setIsProcessingLogin(false);
@@ -67,189 +67,246 @@ export default function LoginPage() {
   };
 
   const isLoading = isAuthLoading || isProcessingLogin;
-  
+
   if (isAuthLoading && !isProcessingLogin) {
     return (
-        <div className="flex h-screen w-screen items-center justify-center bg-background">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        </div>
+      <div className="flex h-screen w-screen items-center justify-center bg-[#F4F7FC]">
+        <Loader2 className="h-10 w-10 animate-spin text-[#246BDE]" />
+      </div>
     );
   }
 
   if (authenticatedUser) {
-     return (
-        <div className="flex h-screen w-screen items-center justify-center bg-background">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        </div>
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#F4F7FC]">
+        <Loader2 className="h-10 w-10 animate-spin text-[#246BDE]" />
+      </div>
     );
   }
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-700 to-orange-600"></div>
-      
-      {/* Animated Shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
-
-      {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
-
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          
-          {/* Logo Section with DICT MIMAROPA Branding */}
-          <Link href="/" className="flex flex-col items-center space-y-6 group cursor-pointer">
-            {/* Logo Container with Hover Effect */}
-            <div 
-              className="relative"
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              <div className={`absolute inset-0 bg-gradient-to-r from-orange-500 to-blue-600 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 ${isHovered ? 'animate-pulse' : ''}`}></div>
-              <div className="relative bg-white/95 backdrop-blur-xl p-6 rounded-full border-4 border-white/50 shadow-2xl transform group-hover:scale-110 transition-transform duration-500">
-                <Image 
-                  src="/icon.png" 
-                  alt="iBarangay Logo" 
-                  width={100} 
-                  height={100} 
-                  className="object-contain drop-shadow-lg"
-                />
-              </div>
+    <div className="min-h-screen bg-[#F4F7FC] flex flex-col justify-between selection:bg-[#246BDE] selection:text-white">
+      {/* Top Header Bar */}
+      <header className="bg-[#102D56] text-white border-b border-white/10 py-3.5 px-4 sm:px-6">
+        <div className="container mx-auto max-w-6xl flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+            <div className="relative flex size-10 items-center justify-center rounded-full bg-white/10 ring-2 ring-yellow-400/50 shrink-0 overflow-hidden">
+              <img
+                src="/images/barangay-seal.png"
+                alt="iBarangay Official Seal"
+                className="size-10 object-contain"
+              />
             </div>
-
-            {/* Title Section */}
-            <div className="text-center space-y-3">
-              <h1 className="text-4xl md:text-5xl font-bold font-headline text-white drop-shadow-2xl animate-in fade-in slide-in-from-top-2 duration-700 group-hover:scale-105 transition-transform">
-                iBarangay
-              </h1>
-              <div className="flex items-center justify-center gap-2 text-sm text-white/90 animate-in fade-in slide-in-from-top-3 duration-900">
-                <div className="h-px w-8 bg-gradient-to-r from-transparent to-white/50"></div>
-                <span className="font-medium">DICT MIMAROPA</span>
-                <div className="h-px w-8 bg-gradient-to-l from-transparent to-white/50"></div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold tracking-tight text-white leading-none">
+                  iBarangay
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#246BDE] text-white uppercase tracking-wider">
+                  Portal
+                </span>
               </div>
-              <p className="text-white/80 text-sm font-medium animate-in fade-in slide-in-from-top-4 duration-1000">
-                Oriental Mindoro Digital Governance
+              <p className="text-[11px] text-white/70 leading-tight mt-0.5">
+                DICT MIMAROPA • Municipality of Bongabong
               </p>
             </div>
           </Link>
 
-          {/* Login Card */}
-          <Card className="bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-1000">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-            
-            <CardHeader className="relative space-y-1 pb-4">
-              <CardTitle className="text-2xl font-bold text-white text-center">Welcome Back</CardTitle>
-              <CardDescription className="text-white/70 text-center">
-                Sign in to access your dashboard
-              </CardDescription>
-            </CardHeader>
+          <Link href="/" className="text-xs text-white/80 hover:text-white font-medium flex items-center gap-1 transition-colors">
+            <span>Back to Home</span>
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      </header>
 
-            <form onSubmit={handleLogin}>
-              <CardContent className="relative space-y-5 pt-2">
-                {/* Email Input */}
-                <div className="space-y-2 group">
-                  <Label htmlFor="credential" className="text-white/90 font-medium">Email Address</Label>
+      {/* Main Login Workspace */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        <div className="w-full max-w-4xl bg-white rounded-3xl border border-[#E5EAF2] shadow-xl overflow-hidden grid lg:grid-cols-12">
+          
+          {/* Left Hero Sidebar (Deep Navy matching dashboard) */}
+          <div className="lg:col-span-5 bg-[#102D56] text-white p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden">
+            {/* Ambient Watermark Circles */}
+            <div className="absolute -right-16 -top-16 size-60 rounded-full border-[28px] border-white/10 pointer-events-none" />
+            <div className="absolute -right-20 -bottom-20 size-72 rounded-full border-[36px] border-white/10 pointer-events-none" />
+
+            <div className="relative z-10 space-y-6">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-semibold text-white/90">
+                <ShieldCheck className="size-3.5 text-emerald-400" />
+                <span>Single Sign-On (SSO)</span>
+              </div>
+
+              {/* Title & Tagline */}
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                  Welcome to iBarangay
+                </h2>
+                <p className="text-xs sm:text-sm text-white/75 mt-2 leading-relaxed">
+                  Your unified gateway to community records, clearance processing, incident mediation, and municipal public safety.
+                </p>
+              </div>
+
+              {/* Feature Points */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-start gap-2.5 text-xs text-white/90">
+                  <CheckCircle2 className="size-4 text-[#246BDE] shrink-0 mt-0.5" />
+                  <span>Instant status tracking for all clearance applications</span>
+                </div>
+                <div className="flex items-start gap-2.5 text-xs text-white/90">
+                  <CheckCircle2 className="size-4 text-[#10A875] shrink-0 mt-0.5" />
+                  <span>Secured under RA 10173 Philippine Data Privacy Act</span>
+                </div>
+                <div className="flex items-start gap-2.5 text-xs text-white/90">
+                  <CheckCircle2 className="size-4 text-yellow-400 shrink-0 mt-0.5" />
+                  <span>Integrated blotters, reports, and emergency dispatch</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Graphic & Tagline */}
+            <div className="relative z-10 pt-8 mt-6 border-t border-white/10 text-center space-y-2">
+              <div className="mx-auto w-full max-w-[200px] h-14 overflow-hidden rounded-md opacity-85">
+                <img
+                  src="/images/sidebar-building.png"
+                  alt="Community Center"
+                  className="w-full h-full object-cover object-center filter brightness-95"
+                />
+              </div>
+              <p className="text-xs font-bold text-white tracking-tight">
+                Barangay Mina de Oro
+              </p>
+              <p className="text-[11px] text-white/60">
+                A Smarter, Stronger Community
+              </p>
+            </div>
+          </div>
+
+          {/* Right Form Card (Clean White matching dashboard forms) */}
+          <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-between bg-white">
+            <div className="space-y-6">
+              {/* Form Header */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl font-bold tracking-tight text-[#172B4D]">
+                    Sign In to Your Account
+                  </h3>
+                </div>
+                <p className="text-xs sm:text-sm text-[#718096]">
+                  Enter your registered credentials to access the resident or staff console.
+                </p>
+              </div>
+
+              {/* Login Form */}
+              <form onSubmit={handleLogin} className="space-y-4">
+                {/* Email Field */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="credential" className="text-xs font-bold text-[#172B4D]">
+                    Email Address
+                  </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50 group-focus-within:text-orange-400 transition-colors" />
-                    <Input 
-                      id="credential" 
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#718096]" />
+                    <Input
+                      id="credential"
                       type="email"
-                      placeholder="admin@ibarangay.com" 
-                      required 
+                      placeholder="e.g. resident@ibarangay.com"
+                      required
                       value={credential}
                       onChange={(e) => setCredential(e.target.value)}
                       disabled={isLoading}
-                      className="pl-11 bg-white/10 border-white/30 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-orange-400/50 transition-all duration-300 h-12"
+                      className="h-11 pl-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder:text-[#A0AEC0] focus:bg-white focus:border-[#246BDE] transition-all"
                     />
                   </div>
                 </div>
 
-                {/* Password Input */}
-                <div className="space-y-2 group">
-                  <Label htmlFor="password" className="text-white/90 font-medium">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/50 group-focus-within:text-orange-400 transition-colors" />
-                    <Input 
-                      id="password" 
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password" 
-                      required 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      className="pl-11 pr-11 bg-white/10 border-white/30 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-orange-400/50 transition-all duration-300 h-12"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  <div className="text-right">
-                    <Link 
-                      href="/forgot-password" 
-                      className="text-sm text-orange-300 hover:text-orange-200 hover:underline transition-colors"
+                {/* Password Field */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-xs font-bold text-[#172B4D]">
+                      Password
+                    </Label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs font-semibold text-[#246BDE] hover:text-[#1E5CC0] hover:underline transition-colors"
                     >
                       Forgot password?
                     </Link>
                   </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#718096]" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your account password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                      className="h-11 pl-10 pr-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder:text-[#A0AEC0] focus:bg-white focus:border-[#246BDE] transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#718096] hover:text-[#172B4D] transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                 </div>
-              </CardContent>
 
-              <CardFooter className="relative flex flex-col gap-4 pt-2">
-                {/* Login Button */}
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed" 
+                {/* Submit Button */}
+                <Button
+                  type="submit"
                   disabled={isLoading}
+                  className="w-full h-11 rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] gap-2 mt-2"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Signing in...
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>Authenticating...</span>
                     </>
                   ) : (
-                    'Sign In'
+                    <>
+                      <span>Sign In</span>
+                      <ArrowRight className="size-4" />
+                    </>
                   )}
                 </Button>
+              </form>
 
-                {/* Register Link */}
-                <div className="flex flex-col gap-2 text-sm text-center text-white/70 pt-2">
-                  <p>
-                    Resident?{' '}
-                    <Link 
-                      href="/register" 
-                      className="font-semibold text-orange-300 hover:text-orange-200 hover:underline transition-colors"
-                    >
-                      Register Here
-                    </Link>
-                  </p>
-                  <p className="text-xs">
-                    For staff accounts, contact your barangay administrator
-                  </p>
-                </div>
-              </CardFooter>
-            </form>
-          </Card>
+              {/* Registration Link & Guidance */}
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E5EAF2] space-y-2 text-center text-xs">
+                <p className="text-[#172B4D] font-medium">
+                  Don&apos;t have an account yet?{' '}
+                  <Link
+                    href="/register"
+                    className="font-bold text-[#246BDE] hover:text-[#1E5CC0] hover:underline ml-1"
+                  >
+                    Register as Resident
+                  </Link>
+                </p>
+                <p className="text-[11px] text-[#718096]">
+                  For barangay staff or official role accounts, contact your Barangay Administrator.
+                </p>
+              </div>
+            </div>
 
-          {/* Footer Branding */}
-          <div className="text-center space-y-2 animate-in fade-in duration-1000 delay-300">
-            <p className="text-white/60 text-xs">
-              Developed by RYAN LANUEVO CLAUD
-            </p>
-            <p className="text-white/40 text-xs">
-              © 2024 iBarangay. All rights reserved.
-            </p>
+            {/* Security Notice */}
+            <div className="pt-6 mt-6 border-t border-[#E5EAF2] flex items-center justify-between text-[11px] text-[#718096]">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="size-3.5 text-emerald-600" />
+                <span>SSL Encrypted Connection</span>
+              </span>
+              <span>RA 10173 Protected</span>
+            </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer Attribution */}
+      <footer className="py-4 text-center text-xs text-[#718096] border-t border-[#E5EAF2] bg-white">
+        <p>© 2026 iBarangay System • Developed by Ryan Claud • DICT MIMAROPA Region IV-B</p>
+      </footer>
     </div>
   );
 }
