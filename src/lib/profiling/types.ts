@@ -171,13 +171,40 @@ export type SectorTag =
 
 // ─── Program Beneficiary ───────────────────────────────────────────────
 
+/**
+ * Full list of government and LGU programs tracked by the profiling module.
+ *
+ * Grouped by agency for readability:
+ *   DSWD   — 4Ps, Social Pension, AICS, Listahanan, CBMS
+ *   DOLE   — TUPAD, DOLE Livelihood
+ *   DepEd/CHED — CHED/TES Scholarship, LGU Scholarship
+ *   SSS/GSIS/PhilHealth — social insurance programs
+ *   DA     — RCEF/Rice Subsidy, Fertilizer Subsidy, RSBSA
+ *   LGU    — LGU Aid / Local Assistance
+ */
 export type ProgramName =
+  // DSWD
   | "4Ps"
   | "Social Pension"
   | "AICS"
+  | "Listahanan / NHTS-PR"
+  | "CBMS"
+  // DOLE
   | "TUPAD"
-  | "Scholarship"
-  | "Listahanan / NHTS-PR";
+  | "DOLE Livelihood"
+  // Education
+  | "CHED / TES Scholarship"
+  | "LGU Scholarship"
+  // Social Insurance
+  | "SSS"
+  | "GSIS"
+  | "PhilHealth (Program)"
+  // Agriculture (DA)
+  | "RCEF / Rice Subsidy"
+  | "Fertilizer Subsidy"
+  | "RSBSA"
+  // LGU
+  | "LGU Aid / Local Assistance";
 
 export type ProgramEnrollmentStatus =
   | "Enrolled"
@@ -189,8 +216,13 @@ export type ProgramEnrollmentStatus =
 export interface ProgramBeneficiary {
   programName: ProgramName;
   status: ProgramEnrollmentStatus;
-  dateEnrolled: string; // ISO date
-  issuingOffice: string; // e.g. "DSWD", "DSWD Field Office IV-B", "LGU"
+  dateEnrolled: string;        // ISO date
+  issuingOffice: string;       // e.g. "DSWD", "DSWD Field Office IV-B", "LGU"
+  // ── Optional sub-fields (backward-compatible) ──
+  referenceNumber?: string;    // SSS/GSIS/PhilHealth member no., control no., 4Ps household ID
+  grantYear?: string;          // For scholarships (e.g. "AY 2024–2025")
+  rsbsaRegistered?: boolean;   // For agriculture programs — is farmer RSBSA-registered?
+  remarks?: string;            // Free text for LGU aid details or special notes
 }
 
 // ─── Voter Info ─────────────────────────────────────────────────────────
@@ -303,6 +335,23 @@ export interface AuditLogEntry {
   entityId: string;
   details: string;
   timestamp: string; // ISO timestamp
+}
+
+// ─── Household Beneficiary Summary (computed client-side) ──────────────
+
+/**
+ * Derived per-household summary of program coverage.
+ * Computed from residents[] grouped by householdId — no extra Firestore reads.
+ */
+export interface HouseholdBeneficiarySummary {
+  householdId: string;
+  householdHeadName: string;
+  purokName: string;
+  address: string;
+  totalMembers: number;
+  enrolledMemberCount: number;         // members with ≥1 active program
+  programCounts: Record<string, number>; // programName → count of enrolled members
+  programs: ProgramName[];             // unique programs present in this household
 }
 
 // ─── Filter / Masterlist ────────────────────────────────────────────────

@@ -56,6 +56,15 @@ export interface ParsedRow {
   philhealth: PhilHealthStatus;
   disability: DisabilityType;
   sectorTags: SectorTag[];
+  // Multiple programs per individual (up to 3 from import template)
+  programs: Array<{
+    programName: ProgramName;
+    programStatus: ProgramEnrollmentStatus;
+    dateEnrolled: string;
+    issuingOffice: string;
+    referenceNumber: string;
+  }>;
+  // Legacy single-program fields kept for backward compatibility
   program: ProgramName | "";
   programStatus: ProgramEnrollmentStatus;
   dateEnrolled: string;
@@ -106,7 +115,24 @@ const VALID_SECTORS = new Set([
   "OFW", "Youth", "Out-of-School Youth",
 ]);
 const VALID_PROGRAMS = new Set([
-  "4Ps", "Social Pension", "AICS", "TUPAD", "Scholarship", "Listahanan / NHTS-PR",
+  "4Ps",
+  "Social Pension",
+  "AICS",
+  "Listahanan / NHTS-PR",
+  "CBMS",
+  "TUPAD",
+  "DOLE Livelihood",
+  "CHED / TES Scholarship",
+  "LGU Scholarship",
+  "SSS",
+  "GSIS",
+  "PhilHealth (Program)",
+  "RCEF / Rice Subsidy",
+  "Fertilizer Subsidy",
+  "RSBSA",
+  "LGU Aid / Local Assistance",
+  // legacy alias kept for backward compatibility with old import files
+  "Scholarship",
 ]);
 const VALID_PROGRAM_STATUS = new Set(["Enrolled", "Pending", "Waitlisted", "Delisted", "Graduated"]);
 
@@ -212,10 +238,7 @@ export async function parseImportFile(
     const philhealthRaw = str(raw["PhilHealth"] ?? raw["philhealth"]);
     const disabilityRaw = str(raw["Disability"] ?? raw["disability"]);
     const sectorsRaw = str(raw["Sector Tags (comma-separated)"] ?? raw["sector_tags"] ?? raw["Sectors"]);
-    const programRaw = str(raw["Program"] ?? raw["program"]);
-    const programStatusRaw = str(raw["Program Status"] ?? raw["program_status"]);
-    const dateEnrolledRaw = str(raw["Date Enrolled"] ?? raw["date_enrolled"]);
-    const issuingOffice = str(raw["Issuing Office"] ?? raw["issuing_office"]);
+    // Program columns are now parsed inside parseProgramGroup() below
     const voterRaw = str(raw["Voter Status"] ?? raw["voter_status"]);
     const precinctNumber = str(raw["Precinct Number"] ?? raw["precinct_number"] ?? raw["Precinct"]);
     const voterDateRaw = str(raw["Voter Verification Date"] ?? raw["voter_verification_date"]);
@@ -302,26 +325,58 @@ export async function parseImportFile(
       }
     }
 
-    // Program
-    let program: ProgramName | "" = "";
-    if (programRaw) {
-      if (VALID_PROGRAMS.has(programRaw)) {
-        program = programRaw as ProgramName;
-      } else {
-        warnings.push(`Unknown program "${programRaw}" — skipped`);
-      }
-    }
+    // Program — support legacy single-program columns AND new multi-program columns (Program 1, Program 2, Program 3)
+    const parsedPrograms: ParsedRow["programs"] = [];
 
-    let programStatus: ProgramEnrollmentStatus = "Enrolled";
-    if (programStatusRaw) {
-      if (VALID_PROGRAM_STATUS.has(programStatusRaw)) {
-        programStatus = programStatusRaw as ProgramEnrollmentStatus;
-      } else {
-        warnings.push(`Invalid program status "${programStatusRaw}" — set to Enrolled`);
-      }
-    }
+    // Helper: parse one program group from column suffix (blank for legacy, "1"/"2"/"3" for new template)
+    const parseProgramGroup = (suffix: string) => {
+      const pLabel = suffix ? ` ${suffix}` : "";
+      const pRaw = str(raw[`Program${pLabel}`] ?? raw[`Program ${suffix}`] ?? (suffix ? "" : raw["Program"] ?? raw["program"]));
+      const pStatusRaw = str(raw[`Program Status${pLabel}`] ?? raw[`Status${pLabel}`] ?? (suffix ? "" : raw["Program Status"] ?? raw["program_status"]));
+      const pDateRaw = str(raw[`Date Enrolled${pLabel}`] ?? (suffix ? "" : raw["Date Enrolled"] ?? raw["date_enrolled"]));
+      const pOffice = str(raw[`Issuing Office${pLabel}`] ?? (suffix ? "" : raw["Issuing Office"] ?? raw["issuing_office"]));
+      const pRef = str(raw[`Reference Number${pLabel}`] ?? raw[`Ref #${pLabel}`] ?? "");
 
-    const dateEnrolled = dateEnrolledRaw ? normalizeDate(dateEnrolledRaw) : "";
+      if (!pRaw) return;
+
+      // Map legacy "Scholarship" alias
+      const resolvedProgram = pRaw === "Scholarship" ? "LGU Scholarship" : pRaw;
+
+      if (VALID_PROGRAMS.has(resolvedProgram)) {
+        const pStatus: ProgramEnrollmentStatus = VALID_PROGRAM_STATUS.has(pStatusRaw)
+          ? (pStatusRaw as ProgramEnrollmentStatus)
+          : "Enrolled";
+        parsedPrograms.push({
+          programName: resolvedProgram as ProgramName,
+          programStatus: pStatus,
+          dateEnrolled: pDateRaw ? normalizeDate(pDateRaw) : "",
+          issuingOffice: pOffice,
+          referenceNumber: pRef,
+        });
+      } else {
+        warnings.push(`Unknown program "${pRaw}" in${suffix ? ` Program ${suffix}` : ""} column — skipped`);
+      }
+    };
+
+    // Parse up to 3 program columns (supports both old single-column and new multi-column template)
+    parseProgramGroup("");   // legacy / Program 1 (backward-compatible)
+    parseProgramGroup("2");  // Program 2
+    parseProgramGroup("3");  // Program 3
+
+    // Deduplicate by program name (keep first occurrence)
+    const seenPrograms = new Set<string>();
+    const uniquePrograms = parsedPrograms.filter((p) => {
+      if (seenPrograms.has(p.programName)) return false;
+      seenPrograms.add(p.programName);
+      return true;
+    });
+
+    // Legacy single-program fields (kept for backward compat with groupByHousehold usage)
+    const legacyProgram = uniquePrograms[0]?.programName ?? ("" as ProgramName | "");
+    const legacyProgramStatus: ProgramEnrollmentStatus = uniquePrograms[0]?.programStatus ?? "Enrolled";
+    const legacyDateEnrolled = uniquePrograms[0]?.dateEnrolled ?? "";
+    const legacyIssuingOffice = uniquePrograms[0]?.issuingOffice ?? "";
+
     const voterVerificationDate = voterDateRaw ? normalizeDate(voterDateRaw) : "";
     const residencyYears = residencyStr ? parseInt(residencyStr, 10) || 0 : 0;
 
@@ -349,10 +404,11 @@ export async function parseImportFile(
       philhealth: (philhealthRaw && VALID_PHILHEALTH.has(philhealthRaw) ? philhealthRaw : "Unknown") as PhilHealthStatus,
       disability: (disabilityRaw && VALID_DISABILITY.has(disabilityRaw) ? disabilityRaw : "None") as DisabilityType,
       sectorTags,
-      program,
-      programStatus,
-      dateEnrolled,
-      issuingOffice,
+      programs: uniquePrograms,
+      program: legacyProgram,
+      programStatus: legacyProgramStatus,
+      dateEnrolled: legacyDateEnrolled,
+      issuingOffice: legacyIssuingOffice,
       voterStatus,
       precinctNumber,
       voterVerificationDate,

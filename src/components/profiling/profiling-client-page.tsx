@@ -85,6 +85,7 @@ import { useFirebase } from "@/firebase";
 import { toast } from "@/hooks/use-toast";
 import { AddIndividualDialog } from "./add-individual-dialog";
 import { AddHouseholdDialog } from "./add-household-dialog";
+import { BenefitsTab } from "./benefits-tab";
 
 const DEFAULT_FILTER: ProfilingFilter = {
   purok: null,
@@ -352,7 +353,7 @@ export function ProfilingClientPage() {
       </div>
 
       <Tabs defaultValue="masterlist" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="masterlist">
             <Users className="mr-2 h-4 w-4" />
             Masterlist
@@ -360,6 +361,10 @@ export function ProfilingClientPage() {
           <TabsTrigger value="households">
             <Home className="mr-2 h-4 w-4" />
             Households
+          </TabsTrigger>
+          <TabsTrigger value="benefits">
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            Benefits
           </TabsTrigger>
           <TabsTrigger value="dashboard">
             <BarChart3 className="mr-2 h-4 w-4" />
@@ -764,6 +769,16 @@ export function ProfilingClientPage() {
               </Table>
             </div>
           </div>
+        </TabsContent>
+
+        {/* ── BENEFITS TAB ── */}
+        <TabsContent value="benefits">
+          <BenefitsTab
+            residents={residents}
+            households={households}
+            barangayName={barangayName}
+            canExport={canExportExcel(role, isSuperAdmin)}
+          />
         </TabsContent>
 
         {/* ── DASHBOARD TAB ── */}

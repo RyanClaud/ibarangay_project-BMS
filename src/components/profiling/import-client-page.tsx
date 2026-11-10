@@ -166,7 +166,16 @@ export function ImportClientPage() {
             voterStatus: p.voterStatus,
           });
 
-          const programBeneficiaries = p.program
+          const programBeneficiaries = p.programs && p.programs.length > 0
+            ? p.programs.map((prog) => ({
+                programName: prog.programName,
+                status: prog.programStatus,
+                dateEnrolled: prog.dateEnrolled || now.split("T")[0],
+                issuingOffice: prog.issuingOffice || "",
+                referenceNumber: prog.referenceNumber || undefined,
+              }))
+            // Legacy fallback: single-program fields
+            : p.program
             ? [
                 {
                   programName: p.program,

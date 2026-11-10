@@ -447,11 +447,12 @@ export function exportHouseholdsPdf(
 // ─── Import Template ──────────────────────────────────────────────────
 
 /**
- * Generate a downloadable Excel template with headers and one sample row
- * for bulk import. The user downloads this, fills it, and uploads it.
+ * Generate a downloadable Excel template with headers and sample rows
+ * for bulk import. Supports up to 3 programs per individual.
  */
 export function downloadImportTemplate(): void {
   const headers = [
+    // Identity & location
     "Household ID",
     "Purok",
     "Address",
@@ -459,88 +460,121 @@ export function downloadImportTemplate(): void {
     "Middle Name",
     "Last Name",
     "Extension",
+    // Demographics
     "Sex",
     "Birthdate (YYYY-MM-DD)",
     "Civil Status",
     "Relationship to Head",
     "Citizenship",
     "Residency (years)",
+    // Socio-economic
     "Education",
     "Occupation",
     "Contact Number",
     "PhilHealth",
     "Disability",
     "Sector Tags (comma-separated)",
+    // Program 1
     "Program",
     "Program Status",
     "Date Enrolled",
     "Issuing Office",
+    "Reference Number",
+    // Program 2
+    "Program 2",
+    "Program Status 2",
+    "Date Enrolled 2",
+    "Issuing Office 2",
+    "Reference Number 2",
+    // Program 3
+    "Program 3",
+    "Program Status 3",
+    "Date Enrolled 3",
+    "Issuing Office 3",
+    "Reference Number 3",
+    // Voter
     "Voter Status",
     "Precinct Number",
     "Voter Verification Date",
+    // Status
     "Individual Status",
   ];
 
-  const sampleRow = [
-    "HH-BRGY-0001",
-    "Purok 1",
-    "123 Rizal St, Purok 1",
-    "Juan",
-    "Reyes",
-    "Dela Cruz",
-    "Jr.",
-    "Male",
-    "1985-03-15",
-    "Married",
-    "Head",
-    "Filipino",
-    "10",
-    "College Graduate",
-    "Farmer",
-    "09171234567",
-    "Member",
-    "None",
-    "Senior Citizen, OFW",
-    "4Ps",
-    "Enrolled",
-    "2023-01-15",
-    "DSWD",
-    "Registered",
-    "0123A",
-    "2024-06-01",
-    "Active",
+  const sampleRow1 = [
+    "HH-BRGY-0001", "Purok 1", "123 Rizal St, Purok 1",
+    "Juan", "Reyes", "Dela Cruz", "Jr.",
+    "Male", "1985-03-15", "Married", "Head", "Filipino", "10",
+    "College Graduate", "Farmer", "09171234567", "Member", "None",
+    "Senior Citizen",
+    "4Ps", "Enrolled", "2023-01-15", "DSWD", "HH-123456",
+    "RSBSA", "Enrolled", "2022-06-01", "DA", "",
+    "PhilHealth (Program)", "Enrolled", "2020-01-01", "PhilHealth", "12-345678901-2",
+    "Registered", "0123A", "2024-06-01", "Active",
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow, sampleRow]);
+  const sampleRow2 = [
+    "HH-BRGY-0001", "Purok 1", "123 Rizal St, Purok 1",
+    "Maria", "Santos", "Dela Cruz", "",
+    "Female", "1988-07-22", "Married", "Spouse", "Filipino", "10",
+    "High School Graduate", "Housewife", "09181234567", "Dependent", "None",
+    "OFW",
+    "SSS", "Enrolled", "2010-03-01", "SSS", "33-1234567-8",
+    "AICS", "Enrolled", "2024-01-10", "DSWD", "",
+    "", "", "", "", "",
+    "Registered", "0123B", "2024-06-01", "Active",
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2]);
   ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 14) }));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Import Template");
 
-  // Add an instructions sheet
-  const instructions = [
+  // Instructions sheet
+  const instructions: (string | number)[][] = [
     ["BULK IMPORT TEMPLATE — INSTRUCTIONS"],
     [],
     ["1. Download this template and fill in your resident data."],
-    ["2. One row per individual. Multiple individuals in the same household"],
-    ["   should share the same Household ID."],
-    ["3. Use the exact dropdown values for Sex, Civil Status, Education, etc."],
-    ["4. Dates must be in YYYY-MM-DD format."],
-    ["5. Sector Tags: comma-separated (e.g. 'Senior Citizen, PWD')"],
-    ["6. Program fields: leave blank if the person is not a beneficiary."],
-    ["7. Duplicate detection: name + birthdate + household ID must be unique."],
-    ["8. Save as .xlsx or .csv before uploading."],
+    ["2. One row per individual. People in the same household share the same Household ID."],
+    ["3. Use the exact values listed below for dropdowns (Sex, Civil Status, etc.)."],
+    ["4. Dates must be in YYYY-MM-DD format (e.g. 1985-03-15)."],
+    ["5. Sector Tags: comma-separated (e.g. 'Senior Citizen, PWD')."],
+    ["6. Up to 3 programs per person using Program, Program 2, Program 3 columns."],
+    ["7. Leave program columns blank if the person has no program enrollment."],
+    ["8. Duplicate detection uses: name + birthdate + household ID."],
+    ["9. Save as .xlsx or .csv before uploading."],
     [],
-    ["Voter Status options: Registered, Not registered, Transferred, Unknown"],
-    ["Sex options: Male, Female"],
-    ["Civil Status: Single, Married, Widowed, Separated, Annulled"],
-    ["Education: No formal education, Elementary, Elementary Graduate, High School, High School Graduate, Vocational, College, College Graduate, Postgraduate"],
-    ["PhilHealth: Member, Dependent, None, Unknown"],
-    ["Disability: None, Visual, Hearing, Speech, Physical, Mental, Multiple, Other"],
-    ["Individual Status: Active, Deceased, Transferred"],
+    ["── DROPDOWN VALUES ──────────────────────────────────────────────────"],
+    [],
+    ["Sex:", "Male, Female"],
+    ["Civil Status:", "Single, Married, Widowed, Separated, Annulled"],
+    ["Relationship to Head:", "Head, Spouse, Son, Daughter, Father, Mother, Brother, Sister,"],
+    ["", "Grandfather, Grandmother, Grandson, Granddaughter, Uncle, Aunt,"],
+    ["", "Nephew, Niece, Cousin, Other Relative, Boarder, Household Helper, Other"],
+    ["PhilHealth:", "Member, Dependent, None, Unknown"],
+    ["Disability:", "None, Visual, Hearing, Speech, Physical, Mental, Multiple, Other"],
+    ["Individual Status:", "Active, Deceased, Transferred"],
+    ["Voter Status:", "Registered, Not registered, Transferred, Unknown"],
+    ["Program Status:", "Enrolled, Pending, Waitlisted, Delisted, Graduated"],
+    [],
+    ["── EDUCATION ────────────────────────────────────────────────────────"],
+    ["", "No formal education, Elementary, Elementary Graduate,"],
+    ["", "High School, High School Graduate, Vocational,"],
+    ["", "College, College Graduate, Postgraduate"],
+    [],
+    ["── PROGRAM NAMES ────────────────────────────────────────────────────"],
+    ["DSWD Programs:", "4Ps, Social Pension, AICS, Listahanan / NHTS-PR, CBMS"],
+    ["DOLE Programs:", "TUPAD, DOLE Livelihood"],
+    ["Education:", "CHED / TES Scholarship, LGU Scholarship"],
+    ["Social Insurance:", "SSS, GSIS, PhilHealth (Program)"],
+    ["Agriculture (DA):", "RCEF / Rice Subsidy, Fertilizer Subsidy, RSBSA"],
+    ["LGU Programs:", "LGU Aid / Local Assistance"],
+    [],
+    ["── SECTOR TAGS ──────────────────────────────────────────────────────"],
+    ["", "Senior Citizen, PWD, Solo Parent, Indigenous Person, OFW, Youth, Out-of-School Youth"],
   ];
   const ws2 = XLSX.utils.aoa_to_sheet(instructions);
-  ws2["!cols"] = [{ wch: 80 }];
+  ws2["!cols"] = [{ wch: 24 }, { wch: 70 }];
   XLSX.utils.book_append_sheet(wb, ws2, "Instructions");
 
   XLSX.writeFile(wb, "iBarangay_Import_Template.xlsx");
