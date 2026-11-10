@@ -3,8 +3,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # NEXT_PUBLIC_* variables must be provided at build time.
-      # They are read from the .env.docker file (created from .env.docker.example).
+      # NEXT_PUBLIC_* variables must be baked into the JS bundle at BUILD time.
+      # Docker Compose reads variable substitution (${VAR}) from a file named
+      # exactly ".env" at the project root, OR from the --env-file flag.
+      # We use --env-file so the professor only manages one file (.env.docker).
+      #
+      # Run with:
+      #   docker compose --env-file .env.docker up --build
+      #
       args:
         NEXT_PUBLIC_FIREBASE_API_KEY:              ${NEXT_PUBLIC_FIREBASE_API_KEY}
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:          ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
@@ -14,8 +20,8 @@ services:
         NEXT_PUBLIC_FIREBASE_APP_ID:               ${NEXT_PUBLIC_FIREBASE_APP_ID}
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID:       ${NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID}
 
-    # Server-side secrets are injected at RUNTIME via env_file.
-    # They never bake into the image layer.
+    # Server-side secrets (Admin SDK, Gemini) injected at RUNTIME only.
+    # They are never baked into the image layer.
     env_file:
       - .env.docker
 
@@ -24,10 +30,9 @@ services:
 
     restart: unless-stopped
 
-    # Health check: hits the Next.js root page every 30 s
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s

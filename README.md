@@ -66,59 +66,63 @@ The system is built with a sophisticated role-based access model to ensure that 
 
 ## 🚀 Quick Start
 
-### Option A — Docker (recommended for professors / reviewers)
+### Option A — Docker, zero setup (recommended for professors / reviewers)
 
-The fastest way to run the project without installing Node.js locally.
+The app has working Firebase credentials hardcoded as fallbacks, so it runs immediately without any configuration.
 
 **Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
-cd ibarangay_project-BMS
-
-# 2. Create your environment file from the template
-cp .env.docker.example .env.docker
-
-# 3. Open .env.docker in any text editor and fill in your Firebase credentials
-#    (see the instructions inside the file — takes about 5 minutes)
-
-# 4. Build and start the container
-docker compose up --build
-
-# 5. Open the app
-#    http://localhost:3000
-#
-# 6. First run: visit http://localhost:3000/initial-setup
-#    to create the Super Admin account
-```
-
-> **Note:** Firebase (database, auth, storage) is a free Google Cloud service. The app connects to your Firebase project over the internet — no local database container is needed. Full setup instructions are inside `.env.docker.example`.
-
-To stop the container:
-```bash
-docker compose down
-```
-
----
-
-### Option B — Local development (Node.js)
-
-**Prerequisites:** Node.js 18+
 
 ```bash
 # 1. Clone
 git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
 cd ibarangay_project-BMS
 
-# 2. Install dependencies
+# 2. Build and start (uses the built-in demo Firebase project)
+docker compose up --build
+
+# 3. Open the app
+#    http://localhost:3000
+#    First run: visit http://localhost:3000/initial-setup
+```
+
+> **Note:** In this mode the app connects to the developer's Firebase project. All features work. Data you enter is visible to the developer.
+
+---
+
+### Option B — Docker, your own Firebase project
+
+For full isolation with your own Firebase database:
+
+```bash
+# 1. Clone
+git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
+cd ibarangay_project-BMS
+
+# 2. Create environment file and fill in your Firebase credentials
+cp .env.docker.example .env.docker
+# (edit .env.docker — instructions are inside the file)
+
+# 3. Build and start using your credentials
+docker compose --env-file .env.docker up --build
+
+# 4. First run: create your Super Admin
+#    http://localhost:3000/initial-setup
+```
+
+To stop either option:
+```bash
+docker compose down
+```
+
+---
+
+### Option C — Local development (Node.js 18+)
+
+```bash
+git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
+cd ibarangay_project-BMS
 npm install --legacy-peer-deps
-
-# 3. Create environment file
-cp .env.docker.example .env.local
-# Fill in your Firebase credentials inside .env.local
-
-# 4. Start the development server
+# App already has working Firebase credentials — runs immediately:
 npm run dev
 # Open http://localhost:9002
 ```
