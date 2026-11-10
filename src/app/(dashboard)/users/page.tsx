@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Shield, UserCog } from 'lucide-react';
+import { Plus, PlusCircle, Edit, Eye, Trash2, Shield, UserCog, KeyRound } from 'lucide-react';
 import { AddUserDialog } from '@/components/users/add-user-dialog';
 import { EditUserDialog } from '@/components/users/edit-user-dialog';
+import { ResetPasswordDialog } from '@/components/users/reset-password-dialog';
 import { CreatingUserOverlay } from '@/components/users/creating-user-overlay';
 import type { User } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function UsersPage() {
   const { currentUser, users, addUser, updateUser, deleteUser, isDataLoading } = useAppContext();
@@ -20,6 +22,9 @@ export default function UsersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userToView, setUserToView] = useState<User | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [lastCreationTime, setLastCreationTime] = useState<number>(0);
 
@@ -53,6 +58,11 @@ export default function UsersPage() {
   const handleEdit = (user: User) => {
     setSelectedUser(user);
     setIsEditDialogOpen(true);
+  };
+
+  const handleResetPassword = (user: User) => {
+    setUserToReset(user);
+    setIsResetDialogOpen(true);
   };
 
   const handleDelete = async (userId: string) => {
@@ -89,6 +99,10 @@ export default function UsersPage() {
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'Treasurer':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'BHW':
+        return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200';
+      case 'Encoder':
+        return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
@@ -120,6 +134,10 @@ export default function UsersPage() {
           <p className="text-muted-foreground">Manage barangay staff and officials</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => window.location.reload()}
@@ -152,7 +170,7 @@ export default function UsersPage() {
               <UserCog className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
               <h3 className="mt-4 text-lg font-semibold">No staff members yet</h3>
               <p className="text-muted-foreground mt-2">
-                Staff members can be added from the Settings page
+                Click the Add User button above to create a new staff account.
               </p>
             </div>
           ) : (
@@ -163,7 +181,7 @@ export default function UsersPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Actions (View, Edit, Delete)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -188,9 +206,19 @@ export default function UsersPage() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setUserToView(user)}
+                            aria-label={`View ${user.name}`}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(user)}
+                            title="Edit user"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -198,7 +226,19 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => handleResetPassword(user)}
+                              title="Reset password"
+                              className="text-orange-600 hover:text-orange-700"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {user.id !== currentUser?.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleDelete(user.id)}
+                              title="Disable user"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -292,6 +332,41 @@ export default function UsersPage() {
           user={selectedUser}
         />
       )}
+
+      {userToView && (
+        <Dialog open onOpenChange={(open) => !open && setUserToView(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>User details</DialogTitle>
+              <DialogDescription>Account information for this staff member.</DialogDescription>
+            </DialogHeader>
+            <dl className="space-y-4">
+              {[
+                ['Full name', userToView.name],
+                ['Email address', userToView.email],
+                ['Role', userToView.role],
+                ['Barangay ID', userToView.barangayId],
+                ['Account status', userToView.isDeleted ? 'Inactive' : 'Active'],
+              ].map(([label, value]) => (
+                <div key={label} className="flex flex-col gap-1">
+                  <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
+                  <dd className="text-sm">{value || '—'}</dd>
+                </div>
+              ))}
+            </dl>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <ResetPasswordDialog
+        isOpen={isResetDialogOpen}
+        onClose={() => {
+          setIsResetDialogOpen(false);
+          setUserToReset(null);
+        }}
+        targetUser={userToReset}
+        adminUid={currentUser?.id ?? ""}
+      />
     </div>
     </>
   );

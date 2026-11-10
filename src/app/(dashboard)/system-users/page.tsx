@@ -32,10 +32,13 @@ import {
   Trash2,
   UserPlus,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  KeyRound
 } from "lucide-react";
 import type { User, Barangay } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
+import { ResetPasswordDialog } from "@/components/users/reset-password-dialog";
+import { EditSystemUserDialog } from "@/components/users/edit-system-user-dialog";
 
 export default function SystemUsersPage() {
   const { currentUser } = useAppContext();
@@ -49,6 +52,8 @@ export default function SystemUsersPage() {
   const [filterRole, setFilterRole] = useState<string>('all');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const isSuperAdmin = currentUser?.isSuperAdmin === true;
 
@@ -87,6 +92,11 @@ export default function SystemUsersPage() {
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setIsEditDialogOpen(true);
+  };
+
+  const handleResetPassword = (user: User) => {
+    setUserToReset(user);
+    setIsResetDialogOpen(true);
   };
 
   const handleDeleteUser = async (userId: string, userName: string, userEmail: string, isSuperAdmin: boolean) => {
@@ -345,6 +355,8 @@ export default function SystemUsersPage() {
                 <SelectItem value="Barangay Captain">Barangay Captain</SelectItem>
                 <SelectItem value="Secretary">Secretary</SelectItem>
                 <SelectItem value="Treasurer">Treasurer</SelectItem>
+                <SelectItem value="BHW">BHW</SelectItem>
+                <SelectItem value="Encoder">Encoder</SelectItem>
                 <SelectItem value="Resident">Resident</SelectItem>
               </SelectContent>
             </Select>
@@ -378,7 +390,7 @@ export default function SystemUsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Barangay</TableHead>
-                  <TableHead>Super Admin</TableHead>
+                  <TableHead>Account Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -401,13 +413,10 @@ export default function SystemUsersPage() {
                         {getBarangayName(user.barangayId)}
                       </TableCell>
                       <TableCell>
-                        {user.isSuperAdmin ? (
-                          <Badge className="bg-purple-100 text-purple-700 border-purple-200">
-                            <Shield className="h-3 w-3 mr-1" />
-                            Super Admin
-                          </Badge>
+                        {user.isDeleted ? (
+                          <Badge className="bg-red-100 text-red-700 border-red-200">Inactive</Badge>
                         ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
+                          <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -430,6 +439,17 @@ export default function SystemUsersPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          {user.id !== currentUser?.id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResetPassword(user)}
+                              title="Reset password"
+                              className="text-orange-600 hover:text-orange-700"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button 
                             variant="ghost" 
                             size="sm"
@@ -450,6 +470,24 @@ export default function SystemUsersPage() {
           )}
         </CardContent>
       </Card>
+
+      <ResetPasswordDialog
+        isOpen={isResetDialogOpen}
+        onClose={() => {
+          setIsResetDialogOpen(false);
+          setUserToReset(null);
+        }}
+        targetUser={userToReset}
+        adminUid={currentUser?.id ?? ""}
+      />
+
+      <EditSystemUserDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => { setIsEditDialogOpen(false); setEditingUser(null); }}
+        user={editingUser}
+        barangays={barangays}
+        onSaved={loadData}
+      />
     </div>
   );
 }

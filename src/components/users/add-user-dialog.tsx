@@ -31,7 +31,7 @@ import { Loader2 } from 'lucide-react';
 const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(["Admin", "Barangay Captain", "Secretary", "Treasurer"]),
+  role: z.enum(["Admin", "Barangay Captain", "Secretary", "Treasurer", "BHW", "Encoder"]),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -45,7 +45,7 @@ interface AddUserDialogProps {
   existingUsers?: User[]; // List of existing users to check for taken roles
 }
 
-const ROLES: Role[] = ["Admin", "Barangay Captain", "Secretary", "Treasurer"];
+const ROLES: Role[] = ["Admin", "Barangay Captain", "Secretary", "Treasurer", "BHW", "Encoder"];
 
 // Roles that should only have one person
 const UNIQUE_ROLES: Role[] = ["Barangay Captain", "Secretary", "Treasurer"];
@@ -64,7 +64,7 @@ export function AddUserDialog({ isOpen, onClose, onAddUser, isCreating = false, 
   const availableRoles = ROLES.filter(role => !takenRoles.has(role));
   
   // Set default role to the first available role
-  const defaultRole = availableRoles.length > 0 ? availableRoles[0] : 'Secretary';
+  const defaultRole = (availableRoles.length > 0 ? availableRoles[0] : 'Secretary') as UserFormData['role'];
   
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -83,7 +83,7 @@ export function AddUserDialog({ isOpen, onClose, onAddUser, isCreating = false, 
     
     setIsSubmitting(true);
     try {
-        await onAddUser(data);
+        await onAddUser(data as unknown as Parameters<typeof onAddUser>[0]);
         
         // Show success message with password
         toast({
