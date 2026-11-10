@@ -16,6 +16,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
 
   // Prefill email from query parameter if directed from registration
   React.useEffect(() => {
@@ -24,22 +25,54 @@ export default function ForgotPasswordPage() {
       if (emailParam) {
         setEmail(emailParam);
       }
+      // Check stored reset cooldown
+      const storedCooldown = localStorage.getItem('ibarangay_reset_cooldown');
+      if (storedCooldown) {
+        const remaining = Math.ceil((parseInt(storedCooldown, 10) - Date.now()) / 1000);
+        if (remaining > 0) setResetCooldown(remaining);
+      }
     }
   }, []);
 
+  // Cooldown countdown
+  React.useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResetCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetCooldown]);
+
   const handleResetRequest = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (resetCooldown > 0) {
+      toast({
+        title: 'Please Wait',
+        description: `Password reset request rate limited. Please wait ${resetCooldown}s before requesting again.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       await sendPasswordReset(email);
       setIsSubmitted(true);
+      // Set 60-second cooldown
+      const expiry = Date.now() + 60 * 1000;
+      localStorage.setItem('ibarangay_reset_cooldown', String(expiry));
+      setResetCooldown(60);
     } catch (error: any) {
       let description = 'An unknown error occurred. Please try again.';
       if (error.code === 'auth/invalid-email') {
         description = 'The email address you entered is not valid.';
       } else if (error.code === 'auth/user-not-found') {
         description = 'No account found with this email address.';
+      } else if (error.code === 'auth/too-many-requests') {
+        description = 'Too many password reset requests. Please try again later.';
+        setResetCooldown(300);
       }
       toast({
         title: 'Reset Request Failed',
@@ -154,14 +187,20 @@ export default function ForgotPasswordPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
-                className="w-full h-11 rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold text-sm shadow-md hover:shadow-lg transition-transform hover:scale-[1.01] gap-2"
+                disabled={isLoading || resetCooldown > 0}
+                className={`w-full h-11 rounded-xl text-white font-bold text-sm shadow-md transition-all gap-2 ${
+                  resetCooldown > 0
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : 'bg-[#246BDE] hover:bg-[#1E5CC0] hover:shadow-lg hover:scale-[1.01]'
+                }`}
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
                     <span>Sending Reset Link...</span>
                   </>
+                ) : resetCooldown > 0 ? (
+                  <span>Rate Limited (Wait {resetCooldown}s)</span>
                 ) : (
                   <>
                     <span>Send Reset Instructions</span>

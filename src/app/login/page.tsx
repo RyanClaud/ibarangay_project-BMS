@@ -8,9 +8,30 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, CheckCircle2, Building2 } from 'lucide-react';
+import {
+  Loader2,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Shield,
+} from 'lucide-react';
 import { useAuth as useAppAuth } from '@/hooks/use-auth';
 import { useAppContext } from '@/contexts/app-context';
+import {
+  checkRateLimit,
+  recordFailedAttempt,
+  recordSuccessfulLogin,
+  RateLimitStatus,
+  formatDuration,
+  RATE_LIMIT_CONFIG,
+} from '@/lib/auth-rate-limiter';
 import Image from 'next/image';
 
 export default function LoginPage() {
@@ -22,6 +43,15 @@ export default function LoginPage() {
   const [isProcessingLogin, setIsProcessingLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Rate Limiting & Brute-Force State
+  const [rateStatus, setRateStatus] = useState<RateLimitStatus>({
+    allowed: true,
+    isLocked: false,
+    remainingAttempts: RATE_LIMIT_CONFIG.MAX_ACCOUNT_ATTEMPTS,
+    lockoutSecondsRemaining: 0,
+    totalAttempts: 0,
+  });
+
   // Prefill email from query parameter if directed from registration or password reset
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -32,32 +62,87 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Check rate limit on mount and whenever credential changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const status = checkRateLimit(credential);
+      setRateStatus(status);
+    }
+  }, [credential]);
+
+  // Live second-by-second countdown timer when in security lockout
+  useEffect(() => {
+    if (!rateStatus.isLocked || rateStatus.lockoutSecondsRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setRateStatus((prev) => {
+        const nextSeconds = prev.lockoutSecondsRemaining - 1;
+        if (nextSeconds <= 0) {
+          // Cooldown finished, recheck fresh state
+          return checkRateLimit(credential);
+        }
+        return {
+          ...prev,
+          lockoutSecondsRemaining: nextSeconds,
+        };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [rateStatus.isLocked, rateStatus.lockoutSecondsRemaining, credential]);
+
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    // 1. Pre-flight rate limit check
+    const currentStatus = checkRateLimit(credential);
+    if (currentStatus.isLocked) {
+      setRateStatus(currentStatus);
+      toast({
+        title: 'Security Cooldown Active',
+        description: `Too many failed login attempts. Please wait ${formatDuration(currentStatus.lockoutSecondsRemaining)} before trying again.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsProcessingLogin(true);
 
     try {
       await login(credential, password);
+      // Success resets rate limiter
+      recordSuccessfulLogin(credential);
     } catch (error: any) {
+      // Re-evaluate rate limit state after failed attempt
+      const updatedStatus = checkRateLimit(credential);
+      setRateStatus(updatedStatus);
+
       let description = 'An unknown error occurred.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          description = 'Invalid email or password. Please verify your credentials and try again.';
-          break;
-        case 'auth/invalid-email':
-          description = 'The email address provided is not valid.';
-          break;
-        case 'auth/too-many-requests':
-          description = 'Too many failed login attempts. Please try again after a few minutes.';
-          break;
-        default:
-          description = error.message || 'Please check your credentials and try again.';
-          break;
+      if (error.code === 'auth/too-many-requests' || updatedStatus.isLocked) {
+        description =
+          updatedStatus.message ||
+          `Account temporarily locked due to repeated incorrect password attempts. Please wait ${formatDuration(updatedStatus.lockoutSecondsRemaining || 60)}.`;
+      } else {
+        switch (error.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            description =
+              updatedStatus.remainingAttempts <= 2
+                ? `Invalid credentials. Warning: Only ${updatedStatus.remainingAttempts} attempt${updatedStatus.remainingAttempts === 1 ? '' : 's'} remaining before security lockout.`
+                : 'Invalid email or password. Please verify your credentials and try again.';
+            break;
+          case 'auth/invalid-email':
+            description = 'The email address provided is not valid.';
+            break;
+          default:
+            description = error.message || 'Please check your credentials and try again.';
+            break;
+        }
       }
+
       toast({
-        title: 'Authentication Failed',
+        title: updatedStatus.isLocked ? 'Security Lockout Engaged' : 'Authentication Failed',
         description: description,
         variant: 'destructive',
       });
@@ -157,8 +242,8 @@ export default function LoginPage() {
                   <span>Secured under RA 10173 Philippine Data Privacy Act</span>
                 </div>
                 <div className="flex items-start gap-2.5 text-xs text-white/90">
-                  <CheckCircle2 className="size-4 text-yellow-400 shrink-0 mt-0.5" />
-                  <span>Integrated blotters, reports, and emergency dispatch</span>
+                  <Shield className="size-4 text-sky-400 shrink-0 mt-0.5" />
+                  <span>Active brute-force rate limiting &amp; anti-hacking firewall</span>
                 </div>
               </div>
             </div>
@@ -183,18 +268,53 @@ export default function LoginPage() {
 
           {/* Right Form Card (Clean White matching dashboard forms) */}
           <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-between bg-white">
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Form Header */}
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-2xl font-bold tracking-tight text-[#172B4D]">
-                    Sign In to Your Account
-                  </h3>
-                </div>
+                <h3 className="text-2xl font-bold tracking-tight text-[#172B4D]">
+                  Sign In to Your Account
+                </h3>
                 <p className="text-xs sm:text-sm text-[#718096]">
                   Enter your registered credentials to access the resident or staff console.
                 </p>
               </div>
+
+              {/* ACTIVE RATE-LIMIT LOCKOUT BANNER */}
+              {rateStatus.isLocked && (
+                <div className="p-4 rounded-2xl bg-[#FEF2F2] border border-[#FECACA] text-red-900 space-y-2 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-xs text-red-700">
+                      <ShieldAlert className="size-4 text-red-600 animate-pulse" />
+                      <span>Security Lockout Active</span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-red-700 bg-red-100 px-2.5 py-0.5 rounded-full border border-red-200">
+                      {formatDuration(rateStatus.lockoutSecondsRemaining)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-red-700 leading-relaxed">
+                    Multiple failed login attempts detected. To protect against unauthorized credential attacks, signing in is temporarily restricted for this account.
+                  </p>
+                  {/* Live Progress Bar */}
+                  <div className="w-full bg-red-200/80 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-red-600 h-full transition-all duration-1000 ease-linear rounded-full"
+                      style={{
+                        width: `${Math.min(100, Math.max(5, (rateStatus.lockoutSecondsRemaining / 60) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* WARNING BANNER FOR REMAINING ATTEMPTS */}
+              {!rateStatus.isLocked && rateStatus.remainingAttempts <= 2 && rateStatus.totalAttempts > 0 && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5 animate-in fade-in">
+                  <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-[11px] leading-relaxed text-amber-800">
+                    <strong>Security Warning:</strong> Only <strong>{rateStatus.remainingAttempts}</strong> attempt{rateStatus.remainingAttempts === 1 ? '' : 's'} remaining before your account is temporarily locked for protection.
+                  </div>
+                </div>
+              )}
 
               {/* Login Form */}
               <form onSubmit={handleLogin} className="space-y-4">
@@ -212,8 +332,8 @@ export default function LoginPage() {
                       required
                       value={credential}
                       onChange={(e) => setCredential(e.target.value)}
-                      disabled={isLoading}
-                      className="h-11 pl-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder:text-[#A0AEC0] focus:bg-white focus:border-[#246BDE] transition-all"
+                      disabled={isLoading || rateStatus.isLocked}
+                      className="h-11 pl-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder:text-[#A0AEC0] focus:bg-white focus:border-[#246BDE] transition-all disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -240,30 +360,40 @@ export default function LoginPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      className="h-11 pl-10 pr-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder:text-[#A0AEC0] focus:bg-white focus:border-[#246BDE] transition-all"
+                      disabled={isLoading || rateStatus.isLocked}
+                      className="h-11 pl-10 pr-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder:text-[#A0AEC0] focus:bg-white focus:border-[#246BDE] transition-all disabled:opacity-60"
                     />
                     <button
                       type="button"
+                      disabled={rateStatus.isLocked}
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#718096] hover:text-[#172B4D] transition-colors cursor-pointer"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#718096] hover:text-[#172B4D] transition-colors cursor-pointer disabled:opacity-40"
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Submit Button */}
+                {/* Submit Button with Rate-Limit Lockout Indicator */}
                 <Button
                   type="submit"
-                  disabled={isLoading}
-                  className="w-full h-11 rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] gap-2 mt-2"
+                  disabled={isLoading || rateStatus.isLocked}
+                  className={`w-full h-11 rounded-xl text-white font-bold text-sm shadow-md transition-all gap-2 mt-2 ${
+                    rateStatus.isLocked
+                      ? 'bg-slate-400 hover:bg-slate-400 cursor-not-allowed opacity-80'
+                      : 'bg-[#246BDE] hover:bg-[#1E5CC0] hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]'
+                  }`}
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
                       <span>Authenticating...</span>
+                    </>
+                  ) : rateStatus.isLocked ? (
+                    <>
+                      <Lock className="size-4 text-white/80" />
+                      <span>Locked ({formatDuration(rateStatus.lockoutSecondsRemaining)} remaining)</span>
                     </>
                   ) : (
                     <>
@@ -291,11 +421,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Security Notice */}
+            {/* Security Notice with Active Rate-Limiting indicator */}
             <div className="pt-6 mt-6 border-t border-[#E5EAF2] flex items-center justify-between text-[11px] text-[#718096]">
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
                 <ShieldCheck className="size-3.5 text-emerald-600" />
-                <span>SSL Encrypted Connection</span>
+                <span>Anti-Brute Force Protection Active</span>
               </span>
               <span>RA 10173 Protected</span>
             </div>

@@ -17,6 +17,7 @@ import { collection, doc, writeBatch, getDoc, setDoc, query, where, getDocs, lim
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
+import { checkRateLimit, recordFailedAttempt, recordSuccessfulLogin, forceLockout } from '@/lib/auth-rate-limiter';
 
 interface AppContextType {
   currentUser: User | null;
@@ -432,7 +433,19 @@ function AppProviderContent({ children }: { children: ReactNode }) {
   const login = async (credential: string, password: string) => {
     if (!auth || !firestore) throw new Error("Auth/Firestore service not available.");
 
-    const email = credential;
+    const email = credential.trim();
+
+    // 1. Client-Side Rate Limit Check before sending auth request
+    const rateStatus = checkRateLimit(email);
+    if (rateStatus.isLocked) {
+      const err = new Error(
+        rateStatus.message || `Account temporarily locked due to multiple failed login attempts. Please wait ${rateStatus.lockoutSecondsRemaining}s.`
+      ) as any;
+      err.code = 'auth/too-many-requests';
+      err.retryAfter = rateStatus.lockoutSecondsRemaining;
+      throw err;
+    }
+
     // Store credentials in memory AND sessionStorage for re-login if admin creates a user
     adminCredentials = { email, password };
     sessionStorage.setItem('admin_creds', JSON.stringify({ email, password }));
@@ -440,7 +453,40 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     
     // Ensure session-only persistence before login
     await setPersistence(auth, browserSessionPersistence);
-    await signInWithEmailAndPassword(auth, email, password);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Reset rate limit counters on verified success
+      recordSuccessfulLogin(email);
+      // Asynchronously reset server-side IP/email rate limit bucket
+      fetch('/api/auth/rate-limit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset', email }),
+      }).catch(() => {});
+    } catch (authError: any) {
+      // Record failed attempt in rate limiter
+      const failStatus = recordFailedAttempt(email);
+
+      // Asynchronously notify server rate limiter
+      fetch('/api/auth/rate-limit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'record_fail', email }),
+      }).catch(() => {});
+
+      if (authError.code === 'auth/too-many-requests' || failStatus.isLocked) {
+        forceLockout(email, (failStatus.lockoutSecondsRemaining || 60) * 1000);
+        const err = new Error(
+          failStatus.message || 'Account temporarily locked due to too many failed login attempts.'
+        ) as any;
+        err.code = 'auth/too-many-requests';
+        err.retryAfter = failStatus.lockoutSecondsRemaining || 60;
+        throw err;
+      }
+
+      throw authError;
+    }
   };
   
   const signInWithGoogle = async () => {
