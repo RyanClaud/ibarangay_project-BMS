@@ -1,0 +1,33 @@
+# ─── Version control ──────────────────────────────────────────────────────────
+.git
+.gitignore
+
+# ─── Dependencies (re-installed inside the container) ─────────────────────────
+node_modules
+npm-debug.log*
+
+# ─── Next.js build output (re-built inside the container) ─────────────────────
+.next
+out
+build
+
+# ─── Environment & secrets (never baked into the image) ───────────────────────
+.env
+.env.*
+!.env.docker.example
+
+# ─── Dev / editor tooling ──────────────────────────────────────────────────────
+.vscode
+.idx
+.genkit
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Docs & non-essential files ───────────────────────────────────────────────
+docs
+*.md
+!README.md
+
+# ─── OS artefacts ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

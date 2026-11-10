@@ -66,62 +66,62 @@ The system is built with a sophisticated role-based access model to ensure that 
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Option A — Docker (recommended for professors / reviewers)
 
-- Node.js 18+ installed
-- Firebase account
-- Google AI API key (for AI features)
+The fastest way to run the project without installing Node.js locally.
 
-### Installation
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
-> **⚠️ IMPORTANT:** Before starting, read [SECURITY_SETUP.md](SECURITY_SETUP.md) for required configuration files.
+```bash
+# 1. Clone the repository
+git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
+cd ibarangay_project-BMS
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
-   cd ibarangay_project-BMS
-   ```
+# 2. Create your environment file from the template
+cp .env.docker.example .env.docker
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# 3. Open .env.docker in any text editor and fill in your Firebase credentials
+#    (see the instructions inside the file — takes about 5 minutes)
 
-3. **Configure Firebase**
-   - Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-   - Enable Authentication (Email/Password)
-   - Create a Firestore database
-   - Enable Storage
-   - **Follow [SECURITY_SETUP.md](SECURITY_SETUP.md) to create required configuration files:**
-     - `src/firebase/config.ts` (copy from `config.example.ts`)
-     - `.firebaserc`
-     - `firebase.json`
-     - `firestore.rules`
-     - `storage.rules`
+# 4. Build and start the container
+docker compose up --build
 
-4. **Set up environment variables**
-   ```bash
-   # Create .env.local file (see SECURITY_SETUP.md for details)
-   FIREBASE_PROJECT_ID=your-project-id
-   FIREBASE_CLIENT_EMAIL=your-service-account-email
-   FIREBASE_PRIVATE_KEY="your-private-key"
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
+# 5. Open the app
+#    http://localhost:3000
+#
+# 6. First run: visit http://localhost:3000/initial-setup
+#    to create the Super Admin account
+```
 
-5. **Deploy Firebase rules**
-   ```bash
-   firebase deploy --only firestore:rules,storage
-   ```
+> **Note:** Firebase (database, auth, storage) is a free Google Cloud service. The app connects to your Firebase project over the internet — no local database container is needed. Full setup instructions are inside `.env.docker.example`.
 
-6. **Run development server**
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:9002](http://localhost:9002)
+To stop the container:
+```bash
+docker compose down
+```
 
-7. **Initial Setup**
-   - Visit `/initial-setup` to create your super admin account
-   - Login and start adding barangays
+---
+
+### Option B — Local development (Node.js)
+
+**Prerequisites:** Node.js 18+
+
+```bash
+# 1. Clone
+git clone https://github.com/RyanClaud/ibarangay_project-BMS.git
+cd ibarangay_project-BMS
+
+# 2. Install dependencies
+npm install --legacy-peer-deps
+
+# 3. Create environment file
+cp .env.docker.example .env.local
+# Fill in your Firebase credentials inside .env.local
+
+# 4. Start the development server
+npm run dev
+# Open http://localhost:9002
+```
 
 ### Quick Setup Guide
 

@@ -1,0 +1,33 @@
+services:
+  ibarangay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # NEXT_PUBLIC_* variables must be provided at build time.
+      # They are read from the .env.docker file (created from .env.docker.example).
+      args:
+        NEXT_PUBLIC_FIREBASE_API_KEY:              ${NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:          ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID:           ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:       ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:  ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
+        NEXT_PUBLIC_FIREBASE_APP_ID:               ${NEXT_PUBLIC_FIREBASE_APP_ID}
+        NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID:       ${NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID}
+
+    # Server-side secrets are injected at RUNTIME via env_file.
+    # They never bake into the image layer.
+    env_file:
+      - .env.docker
+
+    ports:
+      - "3000:3000"
+
+    restart: unless-stopped
+
+    # Health check: hits the Next.js root page every 30 s
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

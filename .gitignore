@@ -39,6 +39,11 @@ next-env.d.ts
 
 .genkit/*
 .env*
+# Docker env file (contains secrets — never commit)
+.env.docker
+# But allow the template example
+!.env.docker.example
+!.env.local.example
 
 # firebase
 firebase-debug.log
@@ -48,6 +53,13 @@ firestore-debug.log
 *.md
 !README.md
 !docs/*.md
+
+# Allow only the essential docs that belong in the repo
+docs/*.md
+!docs/SYSTEM_ARCHITECTURE_TECHNICAL_DETAIL.md
+!docs/PROFILING_MODULE_DESIGN.md
+!docs/PROFILING_USER_GUIDE.md
+!docs/INFRASTRUCTURE_LAYER.md
 
 # Setup scripts (local environment only)
 setup-vercel-env.ps1
