@@ -17,6 +17,16 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  // Prefill email from query parameter if directed from registration
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const emailParam = new URLSearchParams(window.location.search).get('email');
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+    }
+  }, []);
+
   const handleResetRequest = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);

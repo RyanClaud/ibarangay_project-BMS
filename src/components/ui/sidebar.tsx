@@ -21,9 +21,9 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH = "265px"
+const SIDEBAR_WIDTH_MOBILE = "265px"
+const SIDEBAR_WIDTH_ICON = "3.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContext = {
@@ -198,16 +198,17 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-gradient-to-b from-sidebar to-primary/90 p-0 text-sidebar-foreground [&>button]:hidden"
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-              } as React.CSSProperties
-            }
+            className="fixed inset-y-0 top-0 bottom-0 left-0 h-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] w-[280px] max-w-[85vw] bg-[#102D56] p-0 text-white border-r border-[#102D56] shadow-2xl flex flex-col justify-between overflow-hidden [&>button]:hidden"
             side={side}
+            style={{ height: '100dvh', minHeight: '100dvh', maxHeight: '100dvh', top: 0, bottom: 0 }}
           >
             <SheetTitle className="sr-only">Main Menu</SheetTitle>
-            <div className="flex h-full w-full flex-col">{children}</div>
+            <div
+              className="flex h-full min-h-[100dvh] w-full flex-col justify-between bg-[#102D56]"
+              style={{ height: '100dvh', minHeight: '100dvh' }}
+            >
+              {children}
+            </div>
           </SheetContent>
         </Sheet>
       )
@@ -323,7 +324,7 @@ const SidebarInset = React.forwardRef<
     <main
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-gradient-to-br from-background to-primary/5",
+        "relative flex min-h-svh flex-1 flex-col bg-[#F4F7FC]",
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
         className
       )}

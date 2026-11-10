@@ -15,18 +15,38 @@ export type PaymentSettings = {
   gcashQRCodeUrl?: string;
 };
 
+export type EmergencyHotlines = {
+  dutyDesk?: string; // Barangay Duty Desk / Hall Hotline (e.g. "(043) 288-1234")
+  mdrrmo?: string; // MDRRMO / Municipal Disaster Rescue (e.g. "911 / 0917-123-4567")
+  police?: string; // PNP Police Station / Patrol Desk (e.g. "166 / 0998-598-6321")
+  fireStation?: string; // BFP Fire Station (e.g. "160 / (043) 288-1111")
+  healthCenter?: string; // Rural Health Unit / Clinic Hotline (e.g. "0919-876-5432")
+  additionalNotes?: string; // Optional advisory note or radio frequency
+};
+
 export type Barangay = {
   id: string;
   name: string;
   address: string;
   municipality: string;
   province: string;
+  region?: string;
+  zipCode?: string;
+  email?: string;
+  captainName?: string;
+  captainContact?: string;
+  totalPopulation?: number;
+  totalHouseholds?: number;
+  totalVoters?: number;
+  landArea?: string | number;
+  updatedAt?: string;
   sealLogoUrl?: string;
   contactNumber?: string;
   isActive: boolean;
   createdAt: string;
   documentPricing?: DocumentPricing; // Custom pricing per barangay
   paymentSettings?: PaymentSettings; // GCash payment configuration
+  emergencyHotlines?: EmergencyHotlines; // Emergency responder contact numbers
 };
 
 export type BarangayConfig = Barangay; // Alias for backward compatibility
@@ -40,9 +60,12 @@ export type User = {
   barangayId: string; // Assigned barangay
   residentId?: string; // Link user to a resident profile
   isSuperAdmin?: boolean; // Can manage multiple barangays
+  status?: 'Active' | 'Inactive';
   isDeleted?: boolean; // Soft delete flag
   deletedAt?: string; // When the user was deleted
   deletedBy?: string; // Who deleted the user
+  createdAt?: string;
+  phone?: string;
 };
 
 export type Resident = {
@@ -93,6 +116,9 @@ export type DocumentRequest = {
     verifiedBy?: string;         // Treasurer who verified
     verifiedDate?: string;       // When payment was verified
     remarks?: string;            // Treasurer's remarks
+    transactionId?: string;
+    screenshotUrl?: string;
+    screenshotBase64?: string;
   };
   residentSnapshot?: {
     firstName: string;
@@ -121,3 +147,68 @@ export type Official = {
   contactNumber?: string;
   barangayId: string; // Assigned barangay
 };
+
+export type IncidentStatus = 'Unresolved' | 'Under Investigation' | 'Resolved' | 'Settled';
+
+export type IncidentReport = {
+  id: string;
+  caseNumber: string;
+  complainant: string;
+  residentId?: string;
+  respondent: string;
+  type: string;
+  location: string;
+  dateFiled: string;
+  status: IncidentStatus;
+  description: string;
+  barangayId: string;
+  resolvedAt?: string;
+  remarks?: string;
+};
+
+export type EventCategory =
+  | 'Assembly'
+  | 'Community'
+  | 'Health'
+  | 'Clean-Up'
+  | 'Sports'
+  | 'Emergency'
+  | 'Distribution'
+  | 'Other';
+
+export interface BarangayEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string; // YYYY-MM-DD
+  time: string; // e.g. "8:00 AM – 12:00 PM"
+  location: string;
+  category: EventCategory;
+  barangayId: string;
+  createdBy: string;
+  creatorRole: string;
+  createdAt: string;
+}
+
+export type NotificationType =
+  | 'event'
+  | 'document'
+  | 'complaint'
+  | 'resident'
+  | 'payment'
+  | 'system';
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  link?: string;
+  targetRole?: 'Resident' | 'Staff' | 'All';
+  recipientId?: string;
+  barangayId: string;
+  createdAt: string;
+  readBy?: string[];
+  createdBy?: string;
+}
+

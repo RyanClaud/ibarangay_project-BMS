@@ -82,7 +82,12 @@ export default function InsightsPage() {
       const residentData = JSON.stringify(residents);
       const documentRequestData = JSON.stringify(documentRequests);
 
-      const result = await generateCustomReportAction({ ...values, residentData, documentRequestData });
+      const result = await generateCustomReportAction({
+        ...values,
+        reportParameters: values.reportParameters || '{}',
+        residentData,
+        documentRequestData,
+      });
       const { reportSummary, reportData } = result;
       setReportSummary(reportSummary);
 
@@ -112,94 +117,129 @@ export default function InsightsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">AI-Powered Insights</h1>
-        <p className="text-muted-foreground">Leverage AI to analyze data and generate custom reports.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#172B4D]">
+          AI-Powered Analytics &amp; Reports
+        </h1>
+        <p className="text-sm text-[#718096] mt-1">
+          Leverage AI to analyze demographic trends and generate on-demand custom reports.
+        </p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <div className="animate-fade-in p-0.5 rounded-lg bg-gradient-to-b from-primary/20 to-primary/5 hover:from-primary/30 transition-all">
-          <Card className="h-full w-full bg-card/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Sparkles className="text-primary" />Barangay Data Analysis</CardTitle>
-            <CardDescription>Click the button to generate AI-powered insights on resident demographics and document request patterns.</CardDescription>
-          </CardHeader>
-          <CardContent className="min-h-[200px]">
-            {isGeneratingInsights ? (
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            ) : insights ? (
-              <div className="prose prose-sm max-w-none text-foreground dark:prose-invert">{insights}</div>
-            ) : (
-                <div className="text-center text-muted-foreground p-8">Click "Generate Insights" to see AI analysis.</div>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button onClick={handleGenerateInsights} disabled={isGeneratingInsights} className="bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-              {isGeneratingInsights ? <Loader2 className="animate-spin" /> : <Sparkles />}
-              {isGeneratingInsights ? 'Generating...' : 'Generate Insights'}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Card 1: Barangay Data Analysis */}
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-[#172B4D]">
+                <Sparkles className="size-5 text-[#246BDE]" />
+                Barangay Data Analysis
+              </h3>
+              <p className="text-xs sm:text-sm text-[#718096] mt-1">
+                Analyze resident demographics and document request patterns with AI.
+              </p>
+            </div>
+            <div className="p-6 min-h-[220px]">
+              {isGeneratingInsights ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-3/4 rounded-md" />
+                  <Skeleton className="h-4 w-full rounded-md" />
+                  <Skeleton className="h-4 w-5/6 rounded-md" />
+                  <Skeleton className="h-4 w-1/2 rounded-md" />
+                </div>
+              ) : insights ? (
+                <div className="prose prose-sm max-w-none text-[#172B4D] leading-relaxed">{insights}</div>
+              ) : (
+                <div className="text-center text-xs text-[#718096] p-8 border border-dashed border-[#E5EAF2] rounded-xl bg-[#F8FAFC]">
+                  Click &quot;Generate Insights&quot; to begin AI analysis of current barangay records.
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="p-4 bg-[#F8FAFC] border-t border-[#E5EAF2]">
+            <Button 
+              onClick={handleGenerateInsights} 
+              disabled={isGeneratingInsights} 
+              className="bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl shadow-xs font-semibold text-xs h-10 px-5"
+            >
+              {isGeneratingInsights ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+              {isGeneratingInsights ? 'Analyzing Records...' : 'Generate Insights'}
             </Button>
-          </CardFooter>
-          </Card>
+          </div>
         </div>
 
-        <div className="animate-fade-in [--animation-delay:200ms] opacity-0 p-0.5 rounded-lg bg-gradient-to-b from-primary/20 to-primary/5 hover:from-primary/30 transition-all">
-          <Card className="h-full w-full bg-card/80 backdrop-blur-sm">
+        {/* Card 2: Custom Report Generator */}
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onCustomReportSubmit)}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Sparkles className="text-primary" />Custom Report Generator</CardTitle>
-                <CardDescription>Define parameters to generate a custom report with AI.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+                <h3 className="flex items-center gap-2 text-lg font-bold text-[#172B4D]">
+                  <Sparkles className="size-5 text-[#246BDE]" />
+                  Custom Report Generator
+                </h3>
+                <p className="text-xs sm:text-sm text-[#718096] mt-1">
+                  Define parameters to synthesize and download a custom AI report.
+                </p>
+              </div>
+              <div className="p-6 space-y-4">
                 <FormField control={form.control} name="reportTitle" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Report Title</FormLabel>
-                    <FormControl><Input placeholder="e.g., Q3 Document Issuance Analysis" {...field} /></FormControl>
+                    <FormLabel className="text-xs font-semibold text-[#172B4D]">Report Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Q4 Document Issuance & Demographics" className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="reportDescription" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Report Description</FormLabel>
-                    <FormControl><Textarea placeholder="Describe the report you need..." {...field} /></FormControl>
+                    <FormLabel className="text-xs font-semibold text-[#172B4D]">Report Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the focus or specific data summary needed..." className="rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE] min-h-[80px]" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="reportFormat" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Format</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-[#172B4D]">Download Format</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent><SelectItem value="PDF">PDF</SelectItem><SelectItem value="Excel">Excel</SelectItem></SelectContent>
+                      <FormControl>
+                        <SelectTrigger className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="rounded-xl border-[#E5EAF2]">
+                        <SelectItem value="PDF" className="text-xs rounded-lg cursor-pointer">PDF Document (.pdf)</SelectItem>
+                        <SelectItem value="Excel" className="text-xs rounded-lg cursor-pointer">Excel Spreadsheet (.xlsx)</SelectItem>
+                      </SelectContent>
                     </Select>
                   </FormItem>
                 )} />
                 {reportSummary && (
-                   <div className="prose prose-sm max-w-none text-foreground dark:prose-invert border-t pt-4">{reportSummary}</div>
+                  <div className="text-xs text-[#172B4D] border-t border-[#E5EAF2] pt-3 leading-relaxed">{reportSummary}</div>
                 )}
-                 {isGeneratingReport && (
-                    <div className="space-y-2 pt-4 border-t">
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                    </div>
+                {isGeneratingReport && (
+                  <div className="space-y-2 pt-3 border-t border-[#E5EAF2]">
+                    <Skeleton className="h-4 w-1/4 rounded-md" />
+                    <Skeleton className="h-4 w-full rounded-md" />
+                    <Skeleton className="h-4 w-3/4 rounded-md" />
+                  </div>
                 )}
-              </CardContent>
-              <CardFooter>
-                <Button type="submit" disabled={isGeneratingReport} className="bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-                  {isGeneratingReport ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                  {isGeneratingReport ? 'Generating...' : 'Generate Report'}
+              </div>
+              <div className="p-4 bg-[#F8FAFC] border-t border-[#E5EAF2]">
+                <Button 
+                  type="submit" 
+                  disabled={isGeneratingReport} 
+                  className="bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl shadow-xs font-semibold text-xs h-10 px-5"
+                >
+                  {isGeneratingReport ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+                  {isGeneratingReport ? 'Compiling Report...' : 'Generate & Download Report'}
                 </Button>
-              </CardFooter>
+              </div>
             </form>
           </Form>
-          </Card>
         </div>
       </div>
     </div>

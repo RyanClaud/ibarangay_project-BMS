@@ -23,6 +23,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Prefill email from query parameter if directed from registration or password reset
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const emailParam = new URLSearchParams(window.location.search).get('email');
+      if (emailParam) {
+        setCredential(emailParam);
+      }
+    }
+  }, []);
+
   // Email/password authentication only - Google auth removed
 
   const handleLogin = async (event: React.FormEvent) => {

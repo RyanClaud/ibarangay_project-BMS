@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   Table,
   TableBody,
@@ -8,40 +8,65 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { FileDown, MoreHorizontal, PlusCircle } from "lucide-react";
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { FileDown, MoreHorizontal, Search, Info, FileText, FileSpreadsheet } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type { Resident } from "@/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { EditResidentDialog } from "./edit-resident-dialog";
-import { DeleteResidentDialog } from "./delete-resident-dialog";
-import { useRouter } from "next/navigation";
-import { useAppContext } from "@/contexts/app-context";
+} from '@/components/ui/dropdown-menu';
+import type { Resident } from '@/lib/types';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { EditResidentDialog } from './edit-resident-dialog';
+import { DeleteResidentDialog } from './delete-resident-dialog';
+import { useRouter } from 'next/navigation';
+import { useAppContext } from '@/contexts/app-context';
+import { usePagination } from '@/hooks/use-pagination';
+import { PaginationControl } from '@/components/ui/pagination-control';
+import { exportResidentMasterlist } from '@/lib/reports';
 
 export function ResidentClientPage() {
-  const { residents, updateResident, deleteResident } = useAppContext();
-  const [filter, setFilter] = React.useState("");
+  const { residents, updateResident, deleteResident, barangayConfig, users } = useAppContext();
+  const [filter, setFilter] = React.useState('');
   const [residentToEdit, setResidentToEdit] = React.useState<Resident | null>(null);
   const [residentToDelete, setResidentToDelete] = React.useState<Resident | null>(null);
   const router = useRouter();
 
-  const filteredData = (residents || []).filter(
-    (resident) =>
-      resident.firstName.toLowerCase().includes(filter.toLowerCase()) ||
-      resident.lastName.toLowerCase().includes(filter.toLowerCase()) ||
-      resident.userId.toLowerCase().includes(filter.toLowerCase())
-  ).sort((a, b) => {
-    // Assuming IDs are sortable strings like 'RES001', 'RES002'
-    return b.id.localeCompare(a.id);
-  });
+  const officials = React.useMemo(() => {
+    const sec = (users || []).find((u) => u.role === 'Secretary');
+    const cap = (users || []).find((u) => u.role === 'Barangay Captain');
+    return {
+      secretaryName: sec?.name,
+      captainName: cap?.name || barangayConfig?.captainName,
+    };
+  }, [users, barangayConfig]);
+
+  const filteredData = React.useMemo(() => {
+    return (residents || [])
+      .filter(
+        (resident) =>
+          resident.firstName.toLowerCase().includes(filter.toLowerCase()) ||
+          resident.lastName.toLowerCase().includes(filter.toLowerCase()) ||
+          resident.userId.toLowerCase().includes(filter.toLowerCase()) ||
+          resident.purok?.toLowerCase().includes(filter.toLowerCase())
+      )
+      .sort((a, b) => b.id.localeCompare(a.id));
+  }, [residents, filter]);
+
+  // Table pagination
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedItems,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredData, { initialPageSize: 10 });
 
   const handleUpdateResident = (residentId: string, dataToUpdate: Partial<Resident>) => {
     updateResident(residentId, dataToUpdate);
@@ -52,124 +77,209 @@ export function ResidentClientPage() {
     deleteResident(residentId);
     setResidentToDelete(null);
   };
-  
+
   const handleViewProfile = (residentId: string) => {
     router.push(`/residents/${residentId}`);
   };
 
+  const handleExportPdf = () => {
+    if (filteredData && filteredData.length > 0) {
+      exportResidentMasterlist('pdf', filteredData, barangayConfig, officials);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (filteredData && filteredData.length > 0) {
+      exportResidentMasterlist('excel', filteredData, barangayConfig, officials);
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Info banner about resident registration */}
-      <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div className="flex items-start gap-3">
-          <div className="text-blue-600 dark:text-blue-400 text-xl">ℹ️</div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-              Resident Self-Registration
-            </h3>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              Residents can register their own accounts at <strong>/register</strong>. 
-              They will automatically be added to your barangay's resident list after registration.
-            </p>
-          </div>
+    <div className="space-y-5 max-w-7xl mx-auto">
+      {/* Information Banner */}
+      <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#EAF2FF] border border-[#BFDBFE] text-[#172B4D]">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-white text-[#246BDE] shrink-0 shadow-xs">
+          <Info className="size-5" />
+        </div>
+        <div className="text-xs sm:text-sm">
+          <span className="font-bold text-[#172B4D]">Resident Self-Registration:</span>{' '}
+          <span className="text-[#4A5568]">
+            Residents can register accounts online at <strong className="text-[#246BDE]">/register</strong> and their profiles will automatically sync to this directory.
+          </span>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950 rounded-lg border">
-        <Input
-          placeholder="🔍 Search by name or User ID..."
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-          className="max-w-full sm:max-w-sm h-11"
-        />
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto h-11">
-            <FileDown className="mr-2 h-4 w-4" />
-            Export
-          </Button>
+      {/* Search and Action Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-[#E5EAF2] bg-white shadow-xs">
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#718096]" />
+          <Input
+            placeholder="Search by name, Purok, or User ID..."
+            value={filter}
+            onChange={(event) => {
+              setFilter(event.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE] outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <span className="text-xs text-[#718096] font-medium mr-2 hidden sm:inline">
+            {filteredData.length} resident records
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F8FAFC] h-10 gap-2"
+              >
+                <FileDown className="size-4 text-[#246BDE]" />
+                <span>Export Masterlist</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl border-[#E5EAF2] p-1.5 shadow-lg">
+              <DropdownMenuLabel className="text-xs font-semibold text-[#718096]">
+                Official Export Formats
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={handleExportPdf}
+                className="cursor-pointer text-xs rounded-lg px-2.5 py-2 font-medium text-[#172B4D] hover:bg-[#F0F4FA]"
+              >
+                <FileText className="mr-2 size-4 text-[#EF4655]" />
+                <span>Download Official PDF</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleExportExcel}
+                className="cursor-pointer text-xs rounded-lg px-2.5 py-2 font-medium text-[#172B4D] hover:bg-[#F0F4FA]"
+              >
+                <FileSpreadsheet className="mr-2 size-4 text-[#10A875]" />
+                <span>Download Excel (.xlsx)</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      
-      <div className="rounded-lg border shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="hidden md:table-cell font-semibold">User ID</TableHead>
-              <TableHead className="font-semibold">Name</TableHead>
-              <TableHead className="hidden sm:table-cell font-semibold">Address</TableHead>
-              <TableHead className="hidden md:table-cell font-semibold">Birthdate</TableHead>
-              <TableHead className="text-right font-semibold">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.length ? (
-              filteredData.map((resident, index) => (
-                <TableRow 
-                  key={resident.id}
-                  className="hover:bg-muted/30 transition-colors"
-                >
-                  <TableCell className="font-medium hidden md:table-cell">
-                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded text-xs font-mono">
-                      {resident.userId}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 border-2 border-purple-200 dark:border-purple-800">
-                        <AvatarImage src={resident.avatarUrl || undefined} alt={resident.firstName} />
-                        <AvatarFallback className="bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 font-semibold">
-                          {resident.firstName?.[0]}
-                          {resident.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-semibold">{resident.firstName} {resident.lastName}</div>
-                        <div className="text-xs text-muted-foreground md:hidden">{resident.userId}</div>
+
+      {/* Residents Table */}
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <tr className="border-b border-[#E5EAF2] bg-[#F8FAFC] text-xs font-semibold text-[#718096]">
+                <TableHead className="py-3 px-4 font-semibold">User ID</TableHead>
+                <TableHead className="py-3 px-4 font-semibold">Full Name</TableHead>
+                <TableHead className="hidden sm:table-cell py-3 px-4 font-semibold">Address / Purok</TableHead>
+                <TableHead className="hidden md:table-cell py-3 px-4 font-semibold">Birthdate</TableHead>
+                <TableHead className="text-right py-3 px-4 font-semibold">Actions</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody className="divide-y divide-[#F1F5F9]">
+              {paginatedItems.length ? (
+                paginatedItems.map((resident) => (
+                  <TableRow
+                    key={resident.id}
+                    className="hover:bg-[#F9FAFC] transition-colors"
+                  >
+                    <TableCell className="py-3.5 px-4 font-medium">
+                      <span className="px-2.5 py-1 bg-[#EAF2FF] text-[#246BDE] rounded-lg text-xs font-mono font-semibold">
+                        {resident.userId}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-9 border border-[#E5EAF2]">
+                          <AvatarImage src={resident.avatarUrl || undefined} alt={resident.firstName} />
+                          <AvatarFallback className="bg-[#EAF2FF] text-[#246BDE] font-bold text-xs">
+                            {resident.firstName?.[0]}
+                            {resident.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-semibold text-sm text-[#172B4D]">
+                            {resident.firstName} {resident.lastName}
+                          </div>
+                          <div className="text-xs text-[#718096] md:hidden">
+                            {resident.purok || resident.address}
+                          </div>
+                        </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell py-3.5 px-4 text-xs text-[#4A5568]">
+                      {resident.purok ? `${resident.purok}, ` : ''}{resident.address}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell py-3.5 px-4 text-xs text-[#718096]">
+                      {resident.birthdate}
+                    </TableCell>
+                    <TableCell className="py-3.5 px-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            aria-haspopup="true"
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 rounded-lg hover:bg-[#F0F4FA] text-[#718096] hover:text-[#172B4D]"
+                          >
+                            <MoreHorizontal className="size-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl border-[#E5EAF2] p-1.5 shadow-lg">
+                          <DropdownMenuLabel className="text-xs font-semibold text-[#718096] px-2 py-1">
+                            Resident Options
+                          </DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onClick={() => handleViewProfile(resident.id)}
+                            className="cursor-pointer text-xs rounded-lg px-2.5 py-2 text-[#172B4D]"
+                          >
+                            View Resident Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setResidentToEdit(resident)}
+                            className="cursor-pointer text-xs rounded-lg px-2.5 py-2 text-[#172B4D]"
+                          >
+                            Edit Resident Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-[#EF4655] hover:bg-[#FEF2F2] cursor-pointer text-xs rounded-lg px-2.5 py-2 font-medium"
+                            onClick={() => setResidentToDelete(resident)}
+                          >
+                            Delete Record
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center py-10">
+                    <div className="flex flex-col items-center justify-center gap-1.5 text-[#718096]">
+                      <p className="font-semibold text-sm text-[#172B4D]">No residents found</p>
+                      <p className="text-xs">Try adjusting your search criteria</p>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{resident.address}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{resident.birthdate}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost" className="hover:bg-purple-100 dark:hover:bg-purple-900">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleViewProfile(resident.id)} className="cursor-pointer">
-                          👤 View Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setResidentToEdit(resident)} className="cursor-pointer">
-                          ✏️ Edit Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive cursor-pointer" onClick={() => setResidentToDelete(resident)}>
-                          🗑️ Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <span className="text-4xl">👥</span>
-                    <p className="font-medium">No residents found</p>
-                    <p className="text-sm">Try adjusting your search or add a new resident</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Table Pagination */}
+        {filteredData.length > 0 && (
+          <div className="border-t border-[#E5EAF2] px-4 py-2 bg-[#F8FAFC]">
+            <PaginationControl
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="residents"
+            />
+          </div>
+        )}
       </div>
+
       {residentToEdit && (
         <EditResidentDialog
           isOpen={!!residentToEdit}

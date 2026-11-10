@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/contexts/app-context';
+import { useFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,8 @@ import { doc, setDoc, collection } from 'firebase/firestore';
 
 export default function AddResidentPage() {
   const router = useRouter();
-  const { firestore, user } = useApp();
+  const { firestore } = useFirebase();
+  const { currentUser: user } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<{

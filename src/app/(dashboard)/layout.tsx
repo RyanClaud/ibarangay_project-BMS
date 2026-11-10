@@ -3,6 +3,7 @@
 import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { Header } from "@/components/layout/header";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -87,15 +88,17 @@ export default function DashboardLayout({
   
   return (
     <SidebarProvider>
-      <Sidebar className="no-print">
+      <Sidebar className="no-print bg-[#102D56] text-white border-r border-[#102D56]">
         <SidebarNav />
       </Sidebar>
-      <SidebarInset>
-        <div className="flex flex-col h-full">
+      <SidebarInset className="bg-[#F4F7FC] overflow-x-hidden">
+        <div className="flex flex-col min-h-screen bg-[#F4F7FC] overflow-x-hidden w-full max-w-full">
           <Header className="no-print" />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-6 lg:p-7 pb-28 md:pb-7 max-w-full">
             {children}
           </main>
+          {/* Mobile Bottom Sticky Navigation Dock */}
+          <MobileBottomNav />
         </div>
       </SidebarInset>
     </SidebarProvider>

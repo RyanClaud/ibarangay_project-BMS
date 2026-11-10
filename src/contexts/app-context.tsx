@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { User, Resident, DocumentRequest, DocumentRequestStatus, Role, BarangayConfig, DocumentPricing } from '@/lib/types';
+import type { User, Resident, DocumentRequest, DocumentRequestStatus, Role, BarangayConfig, DocumentPricing, IncidentReport, IncidentStatus, BarangayEvent, AppNotification } from '@/lib/types';
 import {
   useCollection,
   useFirebase,
@@ -13,7 +13,7 @@ import {
   useDoc,
   useUser,
 } from '@/firebase';
-import { collection, doc, writeBatch, getDoc, setDoc, query, where, getDocs, limit, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDoc, setDoc, query, where, getDocs, limit, updateDoc, onSnapshot, arrayUnion } from 'firebase/firestore';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { toast } from '@/hooks/use-toast';
@@ -25,17 +25,29 @@ interface AppContextType {
   documentPricing: DocumentPricing | null;
   logout: () => void;
   residents: Resident[] | null;
-  addResident: (resident: Omit<Resident, 'id' | 'userId' | 'avatarUrl' | 'address'> & { email: string }) => Promise<void>;
+  addResident: (resident: Omit<Resident, 'id' | 'userId' | 'avatarUrl' | 'address' | 'barangayId'> & { email: string; barangayId?: string }) => Promise<void>;
   updateResident: (residentId: string, dataToUpdate: Partial<Resident>) => Promise<void>;
   deleteResident: (residentId: string) => void;
   documentRequests: DocumentRequest[] | null;
-  addDocumentRequest: (request: Omit<DocumentRequest, 'id' | 'trackingNumber' | 'requestDate' | 'status' | 'referenceNumber'>) => void;
+  addDocumentRequest: (request: Omit<DocumentRequest, 'id' | 'trackingNumber' | 'requestDate' | 'status' | 'referenceNumber' | 'barangayId'>) => void;
   updateDocumentRequestStatus: (id: string, status: DocumentRequestStatus, paymentDetails?: DocumentRequest['paymentDetails']) => void;
   deleteDocumentRequest: (id: string) => void;
   users: User[] | null;
   addUser: (user: Omit<User, 'id' | 'avatarUrl' | 'residentId'> & { password?: string }) => Promise<void>;
   updateUser: (dataToUpdate: Partial<User> & { id: string }) => Promise<void>;
   deleteUser: (userId: string) => void;
+  incidents: IncidentReport[] | null;
+  addIncident: (incident: Omit<IncidentReport, 'id' | 'caseNumber' | 'dateFiled' | 'status' | 'barangayId'>) => Promise<void>;
+  updateIncidentStatus: (id: string, status: IncidentStatus, remarks?: string) => Promise<void>;
+  deleteIncident: (id: string) => Promise<void>;
+  events: BarangayEvent[] | null;
+  addEvent: (event: Omit<BarangayEvent, 'id' | 'createdAt' | 'barangayId' | 'createdBy' | 'creatorRole'>, notifyResidents?: boolean) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  notifications: AppNotification[] | null;
+  unreadNotificationsCount: number;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  createNotification: (notification: Omit<AppNotification, 'id' | 'createdAt' | 'barangayId' | 'readBy'>) => Promise<void>;
   isDataLoading: boolean;
   login: (credential: string, password: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -179,8 +191,8 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     // Only Admin and Super Admin can see all users
     // Other staff (Secretary, Treasurer, Captain) only see their own user document
     if (isAdminOrSuperAdmin) {
-      // Filter out deleted users
-      return allUsers?.filter(user => !user.isDeleted) || null;
+      // Include all users so admins can view active/inactive status and manage them
+      return allUsers || null;
     }
     // Non-admin staff and residents only see their own user document
     return currentUser ? [currentUser] : [];
@@ -216,6 +228,86 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     return null;
   }, [firestore, currentUser]);
   const { data: documentRequests, isLoading: isRequestsLoading } = useCollection<DocumentRequest>(documentRequestsQuery);
+
+  // --- Incidents & Blotter Complaints Query ---
+  const incidentsQuery = useMemoFirebase(() => {
+    if (isInUserCreationMode()) return null;
+    if (!firestore || !currentUser) return null;
+    if (currentUser.isSuperAdmin) {
+      return collection(firestore, 'incidents');
+    }
+    if (!currentUser.barangayId) return null;
+    return query(collection(firestore, 'incidents'), where('barangayId', '==', currentUser.barangayId));
+  }, [firestore, currentUser]);
+  const { data: rawIncidents, isLoading: isIncidentsLoading } = useCollection<IncidentReport>(incidentsQuery);
+
+  const incidents = useMemo(() => {
+    if (!rawIncidents) return null;
+    return [...rawIncidents].sort(
+      (a, b) => new Date(b.dateFiled || 0).getTime() - new Date(a.dateFiled || 0).getTime()
+    );
+  }, [rawIncidents]);
+
+  // --- Barangay Events Query ---
+  const eventsQuery = useMemoFirebase(() => {
+    if (isInUserCreationMode()) return null;
+    if (!firestore || !currentUser) return null;
+    if (currentUser.isSuperAdmin) {
+      return collection(firestore, 'events');
+    }
+    if (!currentUser.barangayId) return null;
+    return query(collection(firestore, 'events'), where('barangayId', '==', currentUser.barangayId));
+  }, [firestore, currentUser]);
+  const { data: rawEvents } = useCollection<BarangayEvent>(eventsQuery);
+
+  const events = useMemo(() => {
+    if (!rawEvents) return null;
+    return [...rawEvents].sort((a, b) => {
+      const timeA = new Date(`${a.date || '1970-01-01'}`).getTime();
+      const timeB = new Date(`${b.date || '1970-01-01'}`).getTime();
+      return timeA - timeB;
+    });
+  }, [rawEvents]);
+
+  // --- Realtime Notifications Query ---
+  const notificationsQuery = useMemoFirebase(() => {
+    if (isInUserCreationMode()) return null;
+    if (!firestore || !currentUser) return null;
+    if (currentUser.isSuperAdmin) {
+      return collection(firestore, 'notifications');
+    }
+    if (!currentUser.barangayId) return null;
+    return query(collection(firestore, 'notifications'), where('barangayId', '==', currentUser.barangayId));
+  }, [firestore, currentUser]);
+  const { data: rawNotifications } = useCollection<AppNotification>(notificationsQuery);
+
+  const notifications = useMemo(() => {
+    if (!rawNotifications || !currentUser) return null;
+    const isResident = currentUser.role === 'Resident';
+
+    const filtered = rawNotifications.filter((n) => {
+      if (n.recipientId) {
+        return (
+          n.recipientId === currentUser.id ||
+          (currentUser.residentId && n.recipientId === currentUser.residentId)
+        );
+      }
+      if (n.targetRole === 'All') return true;
+      if (isResident && n.targetRole === 'Resident') return true;
+      if (!isResident && n.targetRole === 'Staff') return true;
+      if (!n.targetRole && !n.recipientId) return true;
+      return false;
+    });
+
+    return filtered.sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }, [rawNotifications, currentUser]);
+
+  const unreadNotificationsCount = useMemo(() => {
+    if (!notifications || !currentUser) return 0;
+    return notifications.filter((n) => !(n.readBy || []).includes(currentUser.id)).length;
+  }, [notifications, currentUser]);
 
   const isDataLoading = useMemo(() => {
     if (!currentUser) return true; // Still loading if no user is authenticated yet.
@@ -461,7 +553,7 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
-  const addResident = async (newResidentData: Omit<Resident, 'id' | 'userId' | 'avatarUrl' | 'address'> & { email: string }) => {
+  const addResident = async (newResidentData: Omit<Resident, 'id' | 'userId' | 'avatarUrl' | 'address' | 'barangayId'> & { email: string; barangayId?: string }) => {
     if (!firestore || !auth) throw new Error("Firebase services are not available.");
     if (!currentUser) throw new Error("You must be logged in to create residents.");
     
@@ -673,7 +765,17 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     };
     const requestRef = doc(firestore, 'documentRequests', newId);
     setDocumentNonBlocking(requestRef, newRequest, { merge: true });
-     toast({
+    
+    // Automatically notify staff of new document request
+    createNotification({
+      title: 'New Document Request',
+      message: `${currentUser.name} requested ${newRequest.documentType} (${trackingNumber})`,
+      type: 'document',
+      targetRole: 'Staff',
+      link: '/documents',
+    }).catch(console.error);
+
+    toast({
       title: "Request Submitted!",
       description: `Your request for a ${newRequest.documentType} has been received.`,
     });
@@ -739,6 +841,33 @@ function AppProviderContent({ children }: { children: ReactNode }) {
       console.log('Updating document with data:', updateData);
       await updateDoc(requestRef, updateData);
       console.log('Document updated successfully');
+
+      // Send real-time notification
+      try {
+        const snap = await getDoc(requestRef);
+        if (snap.exists()) {
+          const reqDoc = snap.data() as DocumentRequest;
+          if (status === 'Payment Submitted') {
+            createNotification({
+              title: 'Payment Submitted',
+              message: `${reqDoc.residentName} submitted payment proof for ${reqDoc.documentType} (${reqDoc.trackingNumber}).`,
+              type: 'payment',
+              targetRole: 'Staff',
+              link: '/payments',
+            }).catch(console.error);
+          } else {
+            createNotification({
+              title: `Document ${status}`,
+              message: `Your request for ${reqDoc.documentType} (${reqDoc.trackingNumber}) has been updated to "${status}".`,
+              type: 'document',
+              recipientId: reqDoc.residentId,
+              link: '/dashboard',
+            }).catch(console.error);
+          }
+        }
+      } catch (notifErr) {
+        console.error('Failed to dispatch status notification:', notifErr);
+      }
       
     } catch (error) {
       console.error('Error in updateDocumentRequestStatus:', error);
@@ -868,6 +997,170 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     }
   };
 
+  const addIncident = async (
+    incidentData: Omit<IncidentReport, 'id' | 'caseNumber' | 'dateFiled' | 'status' | 'barangayId'>
+  ) => {
+    if (!firestore || !currentUser) throw new Error('Firestore not initialized');
+    const barangayId = currentUser.barangayId || 'default';
+    const newId = doc(collection(firestore, 'incidents')).id;
+    const year = new Date().getFullYear();
+    const count = (incidents?.length || 0) + 1;
+    const caseNumber = `BLOT-${year}-${String(count).padStart(3, '0')}`;
+
+    const newIncident: IncidentReport = {
+      ...incidentData,
+      id: newId,
+      caseNumber,
+      residentId: currentUser.role === 'Resident' ? currentUser.id : undefined,
+      complainant: incidentData.complainant || currentUser.name || 'Anonymous Resident',
+      dateFiled: new Date().toISOString(),
+      status: 'Unresolved',
+      barangayId,
+    };
+
+    const incidentRef = doc(firestore, 'incidents', newId);
+    await setDoc(incidentRef, newIncident);
+
+    // Notify staff of new complaint
+    createNotification({
+      title: 'New Complaint Filed',
+      message: `${newIncident.complainant} filed complaint (${caseNumber}) against ${newIncident.respondent}: ${newIncident.type}`,
+      type: 'complaint',
+      targetRole: 'Staff',
+      link: '/incidents',
+    }).catch(console.error);
+  };
+
+  const updateIncidentStatus = async (
+    id: string,
+    status: IncidentStatus,
+    remarks?: string
+  ) => {
+    if (!firestore) return;
+    const incidentRef = doc(firestore, 'incidents', id);
+    const updateData: Record<string, any> = { status };
+    if (status === 'Resolved' || status === 'Settled') {
+      updateData.resolvedAt = new Date().toISOString();
+    }
+    if (remarks !== undefined) {
+      updateData.remarks = remarks;
+    }
+    await updateDoc(incidentRef, updateData);
+
+    // Notify complainant if residentId is associated
+    try {
+      const snap = await getDoc(incidentRef);
+      if (snap.exists()) {
+        const incData = snap.data() as IncidentReport;
+        if (incData.residentId) {
+          createNotification({
+            title: 'Complaint Status Updated',
+            message: `Case ${incData.caseNumber} status updated to "${status}".`,
+            type: 'complaint',
+            recipientId: incData.residentId,
+            link: '/dashboard',
+          }).catch(console.error);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to notify complainant of status change:', e);
+    }
+  };
+
+  const deleteIncident = async (id: string) => {
+    if (!firestore) return;
+    const incidentRef = doc(firestore, 'incidents', id);
+    deleteDocumentNonBlocking(incidentRef);
+  };
+
+  // --- Notification Actions ---
+  const createNotification = async (
+    notification: Omit<AppNotification, 'id' | 'createdAt' | 'barangayId' | 'readBy'>
+  ) => {
+    if (!firestore || !currentUser) return;
+    const barangayId = currentUser.barangayId || 'default';
+    const newId = doc(collection(firestore, 'notifications')).id;
+    const newNotification: AppNotification = {
+      ...notification,
+      id: newId,
+      barangayId,
+      createdAt: new Date().toISOString(),
+      readBy: [],
+      createdBy: currentUser.name || currentUser.email,
+    };
+    const notifRef = doc(firestore, 'notifications', newId);
+    await setDoc(notifRef, newNotification);
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    if (!firestore || !currentUser) return;
+    const notifRef = doc(firestore, 'notifications', notificationId);
+    try {
+      await updateDoc(notifRef, {
+        readBy: arrayUnion(currentUser.id),
+      });
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (!firestore || !currentUser || !notifications) return;
+    const unread = notifications.filter((n) => !(n.readBy || []).includes(currentUser.id));
+    if (unread.length === 0) return;
+
+    const batch = writeBatch(firestore);
+    unread.forEach((n) => {
+      const ref = doc(firestore, 'notifications', n.id);
+      batch.update(ref, {
+        readBy: arrayUnion(currentUser.id),
+      });
+    });
+    try {
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
+  };
+
+  // --- Events Actions ---
+  const addEvent = async (
+    eventData: Omit<BarangayEvent, 'id' | 'createdAt' | 'barangayId' | 'createdBy' | 'creatorRole'>,
+    notifyResidents: boolean = true
+  ) => {
+    if (!firestore || !currentUser) throw new Error('Firestore not initialized');
+    const barangayId = currentUser.barangayId || 'default';
+    const newId = doc(collection(firestore, 'events')).id;
+
+    const newEvent: BarangayEvent = {
+      ...eventData,
+      id: newId,
+      barangayId,
+      createdBy: currentUser.name || 'Barangay Official',
+      creatorRole: currentUser.role || 'Secretary',
+      createdAt: new Date().toISOString(),
+    };
+
+    const eventRef = doc(firestore, 'events', newId);
+    await setDoc(eventRef, newEvent);
+
+    if (notifyResidents) {
+      await createNotification({
+        title: `Upcoming Event: ${newEvent.title}`,
+        message: `${newEvent.date} at ${newEvent.location} (${newEvent.time}). ${newEvent.description || ''}`.trim(),
+        type: 'event',
+        targetRole: 'Resident',
+        link: '/dashboard',
+      });
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!firestore) return;
+    const eventRef = doc(firestore, 'events', id);
+    deleteDocumentNonBlocking(eventRef);
+  };
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -887,6 +1180,18 @@ function AppProviderContent({ children }: { children: ReactNode }) {
       addUser,
       updateUser,
       deleteUser,
+      incidents,
+      addIncident,
+      updateIncidentStatus,
+      deleteIncident,
+      events,
+      addEvent,
+      deleteEvent,
+      notifications,
+      unreadNotificationsCount,
+      markNotificationAsRead,
+      markAllNotificationsAsRead,
+      createNotification,
       isDataLoading,
       login,
       changePassword,

@@ -145,13 +145,15 @@ export default function RegisterPage() {
 
       setSuccess(true);
     } catch (err: any) {
-      console.error('Registration error:', err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError('This email is already registered. Please use a different email or login.');
-      } else if (err.code === 'auth/weak-password') {
+      if (err?.code === 'auth/email-already-in-use') {
+        setError('auth/email-already-in-use');
+      } else if (err?.code === 'auth/weak-password') {
         setError('Password should be at least 6 characters long.');
+      } else if (err?.code === 'auth/invalid-email') {
+        setError('Please provide a valid email address.');
       } else {
-        setError(err.message || 'Registration failed. Please try again.');
+        console.warn('Registration failed:', err?.message || err);
+        setError(err?.message || 'Registration failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -386,12 +388,38 @@ export default function RegisterPage() {
               />
             </div>
 
-            {error && (
+            {error === 'auth/email-already-in-use' ? (
+              <div className="bg-amber-500/25 border border-amber-400/60 p-4 rounded-xl space-y-3 backdrop-blur-md shadow-lg">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="h-5 w-5 text-amber-300 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-100">Email Address Already Registered</h4>
+                    <p className="text-xs text-amber-200/90 mt-0.5 leading-relaxed">
+                      The email <strong className="text-white underline">{formData.email}</strong> is already associated with an account in iBarangay.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <Link
+                    href={`/login?email=${encodeURIComponent(formData.email)}`}
+                    className="flex-1 inline-flex items-center justify-center h-9 px-3 text-xs font-bold rounded-lg bg-white text-[#102D56] hover:bg-slate-100 transition-colors shadow-xs"
+                  >
+                    Log In to Your Account &rarr;
+                  </Link>
+                  <Link
+                    href={`/forgot-password?email=${encodeURIComponent(formData.email)}`}
+                    className="inline-flex items-center justify-center h-9 px-3 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/25 transition-colors"
+                  >
+                    Reset Password
+                  </Link>
+                </div>
+              </div>
+            ) : error ? (
               <div className="bg-red-500/20 border border-red-500/50 p-3 rounded-lg flex items-start gap-2">
                 <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-200">{error}</p>
               </div>
-            )}
+            ) : null}
 
             {formData.municipality && formData.barangayId && (
               <div className="bg-green-500/20 border border-green-500/50 p-3 rounded-lg">

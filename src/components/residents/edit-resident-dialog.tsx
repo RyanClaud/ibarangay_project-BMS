@@ -94,23 +94,23 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950 p-6 -m-6 mb-0">
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <User className="h-6 w-6 text-purple-600" />
-            Edit Resident Information
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[#E5EAF2] p-6">
+        <DialogHeader className="bg-[#F8FAFC] border-b border-[#E5EAF2] p-6 -m-6 mb-0">
+          <DialogTitle className="flex items-center gap-2.5 text-xl font-bold text-[#172B4D]">
+            <User className="size-5 text-[#246BDE]" />
+            Edit Resident Record
           </DialogTitle>
-          <DialogDescription className="text-base">
-            Update the resident's details below. All changes will be saved to the system.
+          <DialogDescription className="text-xs sm:text-sm text-[#718096] mt-1">
+            Update the official resident details below. All changes will be saved to the database.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pt-6">
             {/* Personal Information Section */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-purple-600" />
-                Personal Information
+              <h4 className="font-bold text-sm text-[#172B4D] flex items-center gap-2">
+                <User className="size-4 text-[#246BDE]" />
+                Personal Demographics
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
@@ -118,12 +118,11 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-purple-600" />
+                      <FormLabel className="text-xs font-semibold text-[#172B4D]">
                         First Name
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Juan" className="h-11" {...field} />
+                        <Input placeholder="Juan" className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -134,12 +133,11 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-purple-600" />
+                      <FormLabel className="text-xs font-semibold text-[#172B4D]">
                         Last Name
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Dela Cruz" className="h-11" {...field} />
+                        <Input placeholder="Dela Cruz" className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -152,23 +150,21 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-purple-600" />
+                    <FormLabel className="text-xs font-semibold text-[#172B4D]">
                       Email Address
                     </FormLabel>
                     <FormControl>
                       <Input 
                         type="email" 
                         placeholder="juan.cruz@example.com" 
-                        className="h-11 bg-muted" 
+                        className="h-10 rounded-xl border-[#E2E8F0] bg-gray-100 text-sm text-[#718096] cursor-not-allowed" 
                         {...field} 
                         disabled 
                       />
                     </FormControl>
-                    <FormHelperText className="text-xs bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded p-2">
-                      <strong>⚠️ Security:</strong> Email addresses cannot be changed for security reasons. 
-                      To update a login email, the user account must be re-created.
-                    </FormHelperText>
+                    <div className="text-xs bg-[#FFF7ED] border border-[#FED7AA] rounded-xl p-2.5 text-[#FFA51E]">
+                      <strong className="text-[#172B4D]">⚠️ Security:</strong> Email addresses cannot be changed directly to protect account security.
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -179,28 +175,28 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
                 name="birthdate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4 text-purple-600" />
+                    <FormLabel className="flex items-center gap-2 text-xs font-semibold text-[#172B4D]">
+                      <CalendarIcon className="size-3.5 text-[#246BDE]" />
                       Date of Birth
                     </FormLabel>
                     <div className="relative">
                       <FormControl>
-                        <Input placeholder="MM-dd-yyyy" className="h-11" {...field} />
+                        <Input placeholder="MM-dd-yyyy" className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]" {...field} />
                       </FormControl>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="absolute right-0 top-0 h-11 hover:bg-purple-100 dark:hover:bg-purple-900"
+                            className="absolute right-0 top-0 h-10 hover:bg-[#F0F4FA]"
                           >
-                            <CalendarIcon className="h-4 w-4 text-purple-600" />
+                            <CalendarIcon className="size-4 text-[#246BDE]" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 rounded-2xl border-[#E5EAF2]" align="start">
                           <Calendar
                             mode="single"
-                            captionLayout="dropdown-nav"
+                            captionLayout="dropdown"
                             fromYear={new Date().getFullYear() - 100}
                             toYear={new Date().getFullYear()}
                             selected={field.value ? new Date(field.value) : undefined}
@@ -217,13 +213,13 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
               />
             </div>
 
-            <Separator />
+            <Separator className="bg-[#E5EAF2]" />
 
             {/* Location Information Section */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-purple-600" />
-                Location Information
+              <h4 className="font-bold text-sm text-[#172B4D] flex items-center gap-2">
+                <MapPin className="size-4 text-[#246BDE]" />
+                Location &amp; Household Information
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
@@ -231,14 +227,14 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
                   name="purok"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-purple-600" />
+                      <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-[#172B4D]">
+                        <Home className="size-3.5 text-[#246BDE]" />
                         Purok / Sitio
                       </FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g., Purok 1, Sitio Riverside" 
-                          className="h-11" 
+                          className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]" 
                           {...field} 
                         />
                       </FormControl>
@@ -251,12 +247,12 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
                   name="householdNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Hash className="h-4 w-4 text-purple-600" />
+                      <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-[#172B4D]">
+                        <Hash className="size-3.5 text-[#246BDE]" />
                         Household Number
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="HH-001" className="h-11" {...field} />
+                        <Input placeholder="HH-001" className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -265,14 +261,14 @@ export function EditResidentDialog({ isOpen, onClose, onUpdateResident, resident
               </div>
             </div>
 
-            <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+            <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-[#E5EAF2]">
               <DialogClose asChild>
-                <Button type="button" variant="outline" size="lg">
+                <Button type="button" variant="outline" className="rounded-xl border-[#E5EAF2] text-[#172B4D] hover:bg-[#F8FAFC] text-xs font-semibold h-10 px-4">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" size="lg" className="bg-purple-600 hover:bg-purple-700">
-                <User className="mr-2 h-4 w-4" />
+              <Button type="submit" className="bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl shadow-xs font-semibold text-xs h-10 px-5">
+                <User className="mr-2 size-4" />
                 Save Changes
               </Button>
             </DialogFooter>

@@ -97,72 +97,68 @@ export function PaymentSettingsForm() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-center items-center p-8">
-            <Loader2 className="animate-spin h-8 w-8 text-primary" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white p-8 shadow-sm flex justify-center items-center">
+        <Loader2 className="animate-spin h-8 w-8 text-[#246BDE]" />
+      </div>
     );
   }
 
   if (!canEditPaymentSettings) {
     return (
-      <Card className="border-t-4 border-t-blue-500">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+          <h3 className="flex items-center gap-2 text-lg font-bold text-[#172B4D]">
+            <Wallet className="size-5 text-[#246BDE]" />
             GCash Payment Settings
-          </CardTitle>
-          <CardDescription>View the GCash payment information for your barangay.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label>GCash Number</Label>
-            <p className="text-sm text-muted-foreground">{gcashNumber || "Not configured"}</p>
+          </h3>
+          <p className="text-xs text-[#718096] mt-1">View the official GCash payment details for your barangay.</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold text-[#172B4D]">GCash Number</Label>
+            <p className="text-sm font-semibold text-[#172B4D]">{gcashNumber || "Not configured"}</p>
           </div>
-          <div className="space-y-2">
-            <Label>GCash Account Name</Label>
-            <p className="text-sm text-muted-foreground">{gcashName || "Not configured"}</p>
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold text-[#172B4D]">GCash Account Name</Label>
+            <p className="text-sm font-semibold text-[#172B4D]">{gcashName || "Not configured"}</p>
           </div>
           {gcashQRCodeUrl && (
-            <div className="space-y-2">
-              <Label>GCash QR Code</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-[#172B4D]">GCash QR Code</Label>
               <Image 
                 src={gcashQRCodeUrl} 
                 alt="GCash QR Code" 
                 width={200} 
                 height={200} 
-                className="rounded-lg border bg-white p-2" 
+                className="rounded-xl border border-[#E5EAF2] bg-white p-2" 
                 unoptimized 
               />
             </div>
           )}
-          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              Only Treasurers and Administrators can edit payment settings.
+          <div className="bg-[#EAF2FF] p-3.5 rounded-xl border border-[#BFDBFE]">
+            <p className="text-xs text-[#246BDE]">
+              Only Treasurers and Administrators can edit barangay payment settings.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-      <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
-          GCash Payment Settings
-        </CardTitle>
-        <CardDescription>
-          Configure GCash payment information for document requests. Residents will use this information to send payments.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="gcashNumber">GCash Number *</Label>
+    <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+        <h3 className="flex items-center gap-2.5 text-lg font-bold text-[#172B4D]">
+          <Wallet className="size-5 text-[#246BDE]" />
+          GCash Payment Account Settings
+        </h3>
+        <p className="text-xs sm:text-sm text-[#718096] mt-1">
+          Configure official GCash payment information for document requests. Residents will use this information to send payments.
+        </p>
+      </div>
+      <div className="p-6 space-y-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="gcashNumber" className="text-xs font-semibold text-[#172B4D]">GCash Number *</Label>
           <Input 
             id="gcashNumber" 
             type="tel"
@@ -170,39 +166,41 @@ export function PaymentSettingsForm() {
             value={gcashNumber} 
             onChange={(e) => setGcashNumber(e.target.value)}
             maxLength={11}
+            className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-[#718096]">
             Enter the 11-digit mobile number registered with GCash
           </p>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="gcashName">GCash Account Name *</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="gcashName" className="text-xs font-semibold text-[#172B4D]">GCash Account Name *</Label>
           <Input 
             id="gcashName" 
             placeholder="Juan Dela Cruz"
             value={gcashName} 
             onChange={(e) => setGcashName(e.target.value)}
+            className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
           />
-          <p className="text-xs text-muted-foreground">
-            Enter the full name registered with the GCash account
+          <p className="text-[11px] text-[#718096]">
+            Enter the full registered name on the GCash account
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="gcashQRCode" className="flex items-center gap-2">
-            <QrCode className="h-4 w-4" />
+          <Label htmlFor="gcashQRCode" className="flex items-center gap-2 text-xs font-semibold text-[#172B4D]">
+            <QrCode className="size-4 text-[#246BDE]" />
             GCash QR Code URL (Optional)
           </Label>
           <div className="space-y-3">
             {gcashQRCodeUrl && (
-              <div className="flex justify-center p-4 bg-muted rounded-lg">
+              <div className="flex justify-center p-4 bg-[#F8FAFC] rounded-xl border border-[#E5EAF2]">
                 <Image 
                   src={gcashQRCodeUrl} 
                   alt="GCash QR Code Preview" 
                   width={200} 
                   height={200} 
-                  className="rounded-lg border-2 border-border bg-white p-2" 
+                  className="rounded-xl border border-[#E5EAF2] bg-white p-2 shadow-xs" 
                   unoptimized 
                 />
               </div>
@@ -213,28 +211,30 @@ export function PaymentSettingsForm() {
               placeholder="https://example.com/gcash-qr.png"
               value={gcashQRCodeUrl} 
               onChange={(e) => setGcashQRCodeUrl(e.target.value)}
+              className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Upload your GCash QR code to an image hosting service and paste the URL here. Residents can scan this to pay directly.
+          <p className="text-[11px] text-[#718096]">
+            Upload your barangay official GCash QR code and paste the image URL here. Residents can scan it directly.
           </p>
         </div>
 
-        <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
-          <p className="text-xs text-amber-800 dark:text-amber-200">
-            <strong>Important:</strong> This information will be visible to residents when they need to make payments. Ensure all details are accurate.
+        <div className="bg-[#FFF7ED] p-3.5 rounded-xl border border-[#FED7AA]">
+          <p className="text-xs text-[#FFA51E]">
+            <strong className="text-[#172B4D]">Important:</strong> This payment account will be displayed to residents when settling document fees.
           </p>
         </div>
-      </CardContent>
-      <CardFooter>
+      </div>
+      <div className="p-4 bg-[#F8FAFC] border-t border-[#E5EAF2] flex justify-end">
         <Button 
           onClick={handleSaveChanges} 
           disabled={isSaving || !areServicesAvailable || !gcashNumber || !gcashName}
+          className="bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl font-semibold text-xs h-10 px-5 shadow-xs"
         >
           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isSaving ? 'Saving...' : 'Save Payment Settings'}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }

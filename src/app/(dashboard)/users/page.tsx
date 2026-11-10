@@ -1,45 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAppContext } from '@/contexts/app-context';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Plus, PlusCircle, Edit, Eye, Trash2, Shield, UserCog, KeyRound } from 'lucide-react';
-import { AddUserDialog } from '@/components/users/add-user-dialog';
-import { EditUserDialog } from '@/components/users/edit-user-dialog';
-import { ResetPasswordDialog } from '@/components/users/reset-password-dialog';
-import { CreatingUserOverlay } from '@/components/users/creating-user-overlay';
-import type { User } from '@/lib/types';
+import { UserManagementClientPage } from '@/components/users/user-management-client-page';
 import { toast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
 
 export default function UsersPage() {
-  const { currentUser, users, addUser, updateUser, deleteUser, isDataLoading } = useAppContext();
+  const { currentUser, isDataLoading } = useAppContext();
   const router = useRouter();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userToView, setUserToView] = useState<User | null>(null);
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [userToReset, setUserToReset] = useState<User | null>(null);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [lastCreationTime, setLastCreationTime] = useState<number>(0);
 
-  // Security: Only Admin and Barangay Captain can access this page
+  // Security: Only Admin, Barangay Captain, and Super Admin can access user management
   useEffect(() => {
     if (!isDataLoading && currentUser) {
-      const canAccessUserManagement = 
-        currentUser.role === 'Admin' || 
+      const canAccessUserManagement =
+        currentUser.role === 'Admin' ||
         currentUser.role === 'Barangay Captain' ||
         currentUser.isSuperAdmin;
-        
+
       if (!canAccessUserManagement) {
         toast({
           title: 'Access Denied',
-          description: 'Only administrators and barangay captains can access the staff management page.',
+          description: 'Only administrators and barangay captains can access the user management console.',
           variant: 'destructive',
         });
         router.push('/dashboard');
@@ -47,327 +30,23 @@ export default function UsersPage() {
     }
   }, [currentUser, isDataLoading, router]);
 
-  // Filter out Admin users from the list (only show staff)
-  // Also filter out deleted users from the display
-  const staffUsers = users?.filter(user => 
-    user.role !== 'Resident' && 
-    user.barangayId === currentUser?.barangayId &&
-    !user.isDeleted
-  ) || [];
-
-  const handleEdit = (user: User) => {
-    setSelectedUser(user);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleResetPassword = (user: User) => {
-    setUserToReset(user);
-    setIsResetDialogOpen(true);
-  };
-
-  const handleDelete = async (userId: string) => {
-    const confirmMessage = 
-      'Are you sure you want to disable this user account?\n\n' +
-      '⚠️ Note: The user will be blocked from logging in, but their Firebase Authentication account will remain in the system.\n\n' +
-      'To completely remove the auth account, you need to delete it manually from Firebase Console → Authentication.';
-    
-    if (confirm(confirmMessage)) {
-      try {
-        await deleteUser(userId);
-        toast({
-          title: 'User Account Disabled',
-          description: 'The user has been disabled and cannot log in. Their auth account remains in Firebase Console.',
-          duration: 5000,
-        });
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to disable user account.',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'Admin':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-      case 'Barangay Captain':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'Secretary':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'Treasurer':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'BHW':
-        return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200';
-      case 'Encoder':
-        return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-    }
-  };
-
   if (isDataLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading staff...</p>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[#246BDE]" />
       </div>
     );
   }
 
-  // Security check: Don't render if not admin
-  if (currentUser?.role !== 'Admin' && !currentUser?.isSuperAdmin) {
+  // Security check: Don't render if not authorized
+  const isAuthorized =
+    currentUser?.role === 'Admin' ||
+    currentUser?.role === 'Barangay Captain' ||
+    currentUser?.isSuperAdmin;
+
+  if (!isAuthorized) {
     return null;
   }
 
-  return (
-    <>
-      <CreatingUserOverlay isCreating={isCreatingUser} />
-      <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Staff & Users</h1>
-          <p className="text-muted-foreground">Manage barangay staff and officials</p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => window.location.reload()}
-            title="Refresh user list"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-              <path d="M3 3v5h5"/>
-              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
-              <path d="M16 16h5v5"/>
-            </svg>
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCog className="h-5 w-5" />
-            Barangay Staff
-          </CardTitle>
-          <CardDescription>
-            Manage staff members and officials for your barangay
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {staffUsers.length === 0 ? (
-            <div className="text-center py-12">
-              <UserCog className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
-              <h3 className="mt-4 text-lg font-semibold">No staff members yet</h3>
-              <p className="text-muted-foreground mt-2">
-                Click the Add User button above to create a new staff account.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Actions (View, Edit, Delete)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {user.name}
-                          {user.id === currentUser?.id && (
-                            <Badge variant="outline" className="text-xs">
-                              You
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge className={getRoleBadgeColor(user.role)}>
-                          {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setUserToView(user)}
-                            aria-label={`View ${user.name}`}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(user)}
-                            title="Edit user"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {user.id !== currentUser?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleResetPassword(user)}
-                              title="Reset password"
-                              className="text-orange-600 hover:text-orange-700"
-                            >
-                              <KeyRound className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {user.id !== currentUser?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(user.id)}
-                              title="Disable user"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
-            <Shield className="h-5 w-5" />
-            Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-blue-800 dark:text-blue-200">
-          <ul className="space-y-2">
-            <li>• Only administrators can view and manage staff accounts</li>
-            <li>• Staff members (Secretary, Treasurer, Captain) cannot access this page</li>
-            <li>• To add new staff members, go to Settings → Staff Management</li>
-            <li>• You can edit or remove staff members from this page</li>
-            <li>• You cannot delete your own account</li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      <AddUserDialog
-        isOpen={isAddDialogOpen}
-        onClose={() => !isCreatingUser && setIsAddDialogOpen(false)}
-        existingUsers={staffUsers}
-        onAddUser={async (userData) => {
-          // Prevent rapid successive creations
-          const now = Date.now();
-          const timeSinceLastCreation = now - lastCreationTime;
-          if (timeSinceLastCreation < 3000) {
-            toast({
-              title: 'Please Wait',
-              description: `Please wait ${Math.ceil((3000 - timeSinceLastCreation) / 1000)} more seconds before creating another user.`,
-              variant: 'default',
-            });
-            throw new Error('Please wait before creating another user');
-          }
-          
-          setIsCreatingUser(true);
-          setIsAddDialogOpen(false);
-          
-          try {
-            // CRITICAL: Ensure barangayId is explicitly set to admin's barangayId
-            const userDataWithBarangay = {
-              ...userData,
-              barangayId: currentUser?.barangayId || 'default'
-            };
-            console.log('📍 Creating user with barangayId:', userDataWithBarangay.barangayId);
-            
-            // Create user - the overlay will handle the loading state
-            await addUser(userDataWithBarangay);
-            setLastCreationTime(Date.now());
-            
-            // Success - overlay will detect completion and reload
-            console.log('✅ User creation complete');
-          } catch (error: any) {
-            // On error, clear the lock and hide overlay
-            sessionStorage.removeItem('creating_user');
-            setIsCreatingUser(false);
-            
-            toast({
-              title: 'Failed to Create User',
-              description: error.message || 'An error occurred while creating the user.',
-              variant: 'destructive',
-            });
-          }
-        }}
-        isCreating={isCreatingUser}
-      />
-
-      {selectedUser && (
-        <EditUserDialog
-          isOpen={isEditDialogOpen}
-          onClose={() => {
-            setIsEditDialogOpen(false);
-            setSelectedUser(null);
-          }}
-          onUpdateUser={updateUser}
-          user={selectedUser}
-        />
-      )}
-
-      {userToView && (
-        <Dialog open onOpenChange={(open) => !open && setUserToView(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>User details</DialogTitle>
-              <DialogDescription>Account information for this staff member.</DialogDescription>
-            </DialogHeader>
-            <dl className="space-y-4">
-              {[
-                ['Full name', userToView.name],
-                ['Email address', userToView.email],
-                ['Role', userToView.role],
-                ['Barangay ID', userToView.barangayId],
-                ['Account status', userToView.isDeleted ? 'Inactive' : 'Active'],
-              ].map(([label, value]) => (
-                <div key={label} className="flex flex-col gap-1">
-                  <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-                  <dd className="text-sm">{value || '—'}</dd>
-                </div>
-              ))}
-            </dl>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      <ResetPasswordDialog
-        isOpen={isResetDialogOpen}
-        onClose={() => {
-          setIsResetDialogOpen(false);
-          setUserToReset(null);
-        }}
-        targetUser={userToReset}
-        adminUid={currentUser?.id ?? ""}
-      />
-    </div>
-    </>
-  );
+  return <UserManagementClientPage />;
 }

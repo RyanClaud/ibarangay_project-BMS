@@ -91,6 +91,18 @@ service cloud.firestore {
         (request.resource.data.barangayId == getUserBarangayId(request.auth.uid));
     }
     
+    function isSecretary() {
+      return isSignedIn() && getUserRole(request.auth.uid) == "Secretary";
+    }
+
+    function isBarangayCaptain() {
+      return isSignedIn() && getUserRole(request.auth.uid) == "Barangay Captain";
+    }
+
+    function isTreasurer() {
+      return isSignedIn() && getUserRole(request.auth.uid) == "Treasurer";
+    }
+
     /**
      * @description Rules for the /barangays/{barangayId} collection.
      */
@@ -99,7 +111,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSuperAdmin();
       allow create: if true; // Allow creation during initial setup
-      allow update: if isSuperAdmin() || (isAdmin() && isSameBarangay(barangayId));
+      allow update: if isSuperAdmin() || ((isAdmin() || isSecretary() || isTreasurer() || isBarangayCaptain()) && isSameBarangay(barangayId));
       allow delete: if isSuperAdmin();
     }
 
@@ -165,6 +177,45 @@ service cloud.firestore {
     match /barangayConfig/{configId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the /incidents/{incidentId} collection.
+     */
+    match /incidents/{incidentId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isStaff() && isSameBarangay(resource.data.barangayId)) ||
+        (resource.data.residentId == request.auth.uid)
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isSuperAdmin() ||
+        (isStaff() && isSameBarangay(resource.data.barangayId)) ||
+        (resource.data.residentId == request.auth.uid)
+      );
+      allow delete: if isSuperAdmin() || (isStaff() && isSameBarangay(resource.data.barangayId));
+    }
+
+    /**
+     * @description Rules for the /events/{eventId} collection.
+     */
+    match /events/{eventId} {
+      allow list, get: if isSignedIn();
+      allow create: if isSignedIn() && (isStaff() || isSuperAdmin());
+      allow update: if isSignedIn() && (isStaff() || isSuperAdmin());
+      allow delete: if isSignedIn() && (isStaff() || isSuperAdmin());
+    }
+
+    /**
+     * @description Rules for the /notifications/{notificationId} collection.
+     */
+    match /notifications/{notificationId} {
+      allow list, get: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && (isStaff() || isSuperAdmin());
     }
   }
 }

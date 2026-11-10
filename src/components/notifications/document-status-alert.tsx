@@ -30,29 +30,29 @@ export function DocumentStatusAlert({ requests, onPayNow }: DocumentStatusAlertP
     <div className="space-y-3">
       {/* Ready for Pickup - Highest Priority */}
       {readyForPickup.length > 0 && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-          <Package className="h-5 w-5 text-green-600" />
-          <AlertTitle className="text-green-900 dark:text-green-100 font-semibold">
+        <Alert className="rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] text-[#172B4D]">
+          <Package className="h-5 w-5 text-[#10A875]" />
+          <AlertTitle className="text-[#172B4D] font-bold text-sm">
             {readyForPickup.length} Document{readyForPickup.length > 1 ? 's' : ''} Ready for Pickup! 🎉
           </AlertTitle>
-          <AlertDescription className="text-green-800 dark:text-green-200">
+          <AlertDescription className="text-xs text-[#4A5568]">
             <div className="mt-2 space-y-2">
               {readyForPickup.map(request => (
-                <div key={request.id} className="flex items-center justify-between bg-white dark:bg-green-900 p-3 rounded-md">
+                <div key={request.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#E5EAF2]">
                   <div>
-                    <p className="font-medium">{request.documentType}</p>
-                    <p className="text-sm text-muted-foreground">Tracking: {request.trackingNumber}</p>
+                    <p className="font-semibold text-xs text-[#172B4D]">{request.documentType}</p>
+                    <p className="text-[11px] text-[#718096]">Tracking: {request.trackingNumber}</p>
                   </div>
-                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                  <Badge variant="outline" className="bg-[#ECFDF5] text-[#10A875] border-[#A7F3D0] text-xs">
                     Ready
                   </Badge>
                 </div>
               ))}
-              <p className="text-sm mt-3">
+              <p className="text-xs mt-2 text-[#718096]">
                 📍 Visit the barangay office during office hours to claim your document(s).
               </p>
-              <p className="text-sm font-medium">
-                ⏰ Office Hours: Monday-Friday, 8:00 AM - 5:00 PM
+              <p className="text-xs font-semibold text-[#172B4D]">
+                ⏰ Office Hours: Monday–Friday, 8:00 AM – 5:00 PM
               </p>
             </div>
           </AlertDescription>
@@ -61,25 +61,25 @@ export function DocumentStatusAlert({ requests, onPayNow }: DocumentStatusAlertP
 
       {/* Payment Verified - Document Being Prepared */}
       {paymentVerified.length > 0 && (
-        <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-          <Clock className="h-5 w-5 text-blue-600" />
-          <AlertTitle className="text-blue-900 dark:text-blue-100 font-semibold">
+        <Alert className="rounded-2xl border border-[#BFDBFE] bg-[#EAF2FF] text-[#172B4D]">
+          <Clock className="h-5 w-5 text-[#246BDE]" />
+          <AlertTitle className="text-[#172B4D] font-bold text-sm">
             {paymentVerified.length} Document{paymentVerified.length > 1 ? 's' : ''} Being Prepared
           </AlertTitle>
-          <AlertDescription className="text-blue-800 dark:text-blue-200">
+          <AlertDescription className="text-xs text-[#4A5568]">
             <div className="mt-2 space-y-2">
               {paymentVerified.map(request => (
-                <div key={request.id} className="flex items-center justify-between bg-white dark:bg-blue-900 p-3 rounded-md">
+                <div key={request.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#E5EAF2]">
                   <div>
-                    <p className="font-medium">{request.documentType}</p>
-                    <p className="text-sm text-muted-foreground">Tracking: {request.trackingNumber}</p>
+                    <p className="font-semibold text-xs text-[#172B4D]">{request.documentType}</p>
+                    <p className="text-[11px] text-[#718096]">Tracking: {request.trackingNumber}</p>
                   </div>
-                  <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                  <Badge variant="outline" className="bg-[#EAF2FF] text-[#246BDE] border-[#BFDBFE] text-xs">
                     In Progress
                   </Badge>
                 </div>
               ))}
-              <p className="text-sm mt-3">
+              <p className="text-xs mt-2 text-[#718096]">
                 Your payment has been verified. The document is being prepared and will be ready soon.
               </p>
             </div>
@@ -89,30 +89,31 @@ export function DocumentStatusAlert({ requests, onPayNow }: DocumentStatusAlertP
 
       {/* Approved - Needs Payment */}
       {approved.length > 0 && (
-        <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
-          <Bell className="h-5 w-5 text-amber-600" />
-          <AlertTitle className="text-amber-900 dark:text-amber-100 font-semibold">
+        <Alert className="rounded-2xl border border-[#FED7AA] bg-[#FFF7ED] text-[#172B4D]">
+          <Bell className="h-5 w-5 text-[#FFA51E]" />
+          <AlertTitle className="text-[#172B4D] font-bold text-sm">
             Action Required: Upload Payment Proof
           </AlertTitle>
-          <AlertDescription className="text-amber-800 dark:text-amber-200">
+          <AlertDescription className="text-xs text-[#4A5568]">
             <div className="mt-2 space-y-2">
               {approved.map(request => (
-                <div key={request.id} className="flex items-center justify-between bg-white dark:bg-amber-900 p-3 rounded-md">
+                <div key={request.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#E5EAF2]">
                   <div>
-                    <p className="font-medium">{request.documentType}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-semibold text-xs text-[#172B4D]">{request.documentType}</p>
+                    <p className="text-[11px] text-[#718096]">
                       Amount: {request.amount.toLocaleString('en-US', { style: 'currency', currency: 'PHP' })}
                     </p>
                   </div>
                   <Button 
                     size="sm" 
+                    className="bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-lg text-xs font-semibold h-8"
                     onClick={() => onPayNow ? onPayNow(request) : router.push('/dashboard')}
                   >
                     Pay Now
                   </Button>
                 </div>
               ))}
-              <p className="text-sm mt-3">
+              <p className="text-xs mt-2 text-[#718096]">
                 Your request has been approved. Please upload your payment proof to continue processing.
               </p>
             </div>
@@ -122,21 +123,21 @@ export function DocumentStatusAlert({ requests, onPayNow }: DocumentStatusAlertP
 
       {/* Rejected */}
       {rejected.length > 0 && (
-        <Alert className="border-red-500 bg-red-50 dark:bg-red-950">
-          <XCircle className="h-5 w-5 text-red-600" />
-          <AlertTitle className="text-red-900 dark:text-red-100 font-semibold">
+        <Alert className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] text-[#172B4D]">
+          <XCircle className="h-5 w-5 text-[#EF4655]" />
+          <AlertTitle className="text-[#172B4D] font-bold text-sm">
             {rejected.length} Request{rejected.length > 1 ? 's' : ''} Rejected
           </AlertTitle>
-          <AlertDescription className="text-red-800 dark:text-red-200">
+          <AlertDescription className="text-xs text-[#4A5568]">
             <div className="mt-2 space-y-2">
               {rejected.map(request => (
-                <div key={request.id} className="bg-white dark:bg-red-900 p-3 rounded-md">
-                  <p className="font-medium">{request.documentType}</p>
-                  <p className="text-sm text-muted-foreground">Tracking: {request.trackingNumber}</p>
+                <div key={request.id} className="bg-white p-3 rounded-xl border border-[#E5EAF2]">
+                  <p className="font-semibold text-xs text-[#172B4D]">{request.documentType}</p>
+                  <p className="text-[11px] text-[#718096]">Tracking: {request.trackingNumber}</p>
                 </div>
               ))}
-              <p className="text-sm mt-3">
-                Please contact the barangay office for more information about the rejection.
+              <p className="text-xs mt-2 text-[#718096]">
+                Please contact the barangay office for more information regarding this status.
               </p>
             </div>
           </AlertDescription>

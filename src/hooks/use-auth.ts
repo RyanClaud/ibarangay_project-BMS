@@ -43,6 +43,7 @@ export const ensureUserDocument = async (firestore: any, authUser: AuthUser, log
         avatarUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/100/100`,
         role: 'Resident', // Default to 'Resident'
         residentId: authUser.uid, // Assume residentId is the same as userId for this default case
+        barangayId: 'default',
     };
     await setDoc(userRef, newUser);
     return newUser;

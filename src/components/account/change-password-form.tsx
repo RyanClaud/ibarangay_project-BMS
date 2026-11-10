@@ -71,22 +71,22 @@ export function ChangePasswordForm() {
   };
 
   return (
-    <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
+    <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">🔐</span>
-              Change Password
-            </CardTitle>
-            <CardDescription>
+          <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+            <h3 className="flex items-center gap-2.5 text-lg font-bold text-[#172B4D]">
+              <span className="text-xl">🔐</span>
+              Change Account Password
+            </h3>
+            <p className="text-xs sm:text-sm text-[#718096] mt-1">
               Update your password here. After saving, you will be logged out and will need to sign in again.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Security Tip:</strong> Use a strong password with at least 6 characters, including letters, numbers, and symbols.
+            </p>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="bg-[#FFF7ED] border border-[#FED7AA] rounded-xl p-3.5">
+              <p className="text-xs text-[#FFA51E]">
+                <strong className="text-[#172B4D]">Security Tip:</strong> Use a strong password with at least 6 characters, including letters, numbers, and symbols.
               </p>
             </div>
             <FormField
@@ -94,12 +94,12 @@ export function ChangePasswordForm() {
               name="currentPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Password</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-[#172B4D]">Current Password</FormLabel>
                   <FormControl>
                     <Input 
                       type="password" 
                       placeholder="Enter your current password" 
-                      className="h-11"
+                      className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
                       {...field} 
                     />
                   </FormControl>
@@ -112,12 +112,12 @@ export function ChangePasswordForm() {
               name="newPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Password</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-[#172B4D]">New Password</FormLabel>
                   <FormControl>
                     <Input 
                       type="password" 
                       placeholder="Enter your new password (min. 6 characters)" 
-                      className="h-11"
+                      className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
                       {...field} 
                     />
                   </FormControl>
@@ -130,12 +130,12 @@ export function ChangePasswordForm() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm New Password</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-[#172B4D]">Confirm New Password</FormLabel>
                   <FormControl>
                     <Input 
                       type="password" 
                       placeholder="Re-enter your new password" 
-                      className="h-11"
+                      className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
                       {...field} 
                     />
                   </FormControl>
@@ -143,18 +143,22 @@ export function ChangePasswordForm() {
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter className="bg-muted/50 flex justify-between items-center">
-            <p className="text-xs text-muted-foreground">
-              You'll be logged out after changing your password
+          </div>
+          <div className="p-4 bg-[#F8FAFC] border-t border-[#E5EAF2] flex flex-col sm:flex-row justify-between items-center gap-3">
+            <p className="text-xs text-[#718096]">
+              You will be automatically logged out after changing your password
             </p>
-            <Button type="submit" disabled={isSaving} size="lg">
+            <Button 
+              type="submit" 
+              disabled={isSaving} 
+              className="w-full sm:w-auto bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl font-semibold text-xs h-10 px-5 shadow-xs"
+            >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSaving ? 'Updating...' : 'Update Password'}
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
-    </Card>
+    </div>
   );
 }

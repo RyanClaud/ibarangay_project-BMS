@@ -1,5 +1,4 @@
-import type { Metadata } from "next";
-import { PT_Sans, Playfair_Display } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
@@ -8,27 +7,23 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { GlobalErrorInterceptor } from "@/components/global-error-interceptor";
 import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 
-const ptSans = PT_Sans({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-sans",
-});
-
-const playfairDisplay = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-headline",
-});
-
+export const viewport: Viewport = {
+  themeColor: "#102D56",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "iBarangay - Community Management",
   description: "Modernizing Community Management. Efficiently. Effectively.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.png", // Specifies the primary icon
-    shortcut: "/icon.png", // Specifies the shortcut icon
-    apple: "/icon.png", // Specifies the Apple touch icon
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
   appleWebApp: {
     capable: true,
@@ -37,14 +32,6 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
-  },
-  themeColor: "#1e3a8a",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-    viewportFit: "cover",
   },
 };
 
@@ -55,7 +42,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background font-body antialiased", ptSans.variable, playfairDisplay.variable)}>
+      <body className={cn("min-h-screen bg-background font-body antialiased")}>
         <ThemeProvider>
           <AppProvider>
             <GlobalErrorInterceptor />

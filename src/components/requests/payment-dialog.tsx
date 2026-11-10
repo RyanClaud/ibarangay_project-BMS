@@ -221,6 +221,7 @@ export function PaymentDialog({ isOpen, onClose, request }: PaymentDialogProps) 
 
         const paymentDetails = {
             method: "GCash",
+            referenceNumber: transactionId || `REF-${Date.now()}`,
             transactionId: transactionId,
             paymentDate: new Date().toISOString(),
             screenshotBase64: base64Image, // Store base64 instead of URL
@@ -319,7 +320,7 @@ export function PaymentDialog({ isOpen, onClose, request }: PaymentDialogProps) 
                   <div className="flex justify-center p-3 bg-white dark:bg-emerald-900 rounded">
                     <div className="text-center space-y-2">
                       <p className="text-xs text-muted-foreground">Scan to Pay</p>
-                      <Image
+                      <NextImage
                         src={paymentSettings.gcashQRCodeUrl}
                         alt="GCash QR Code"
                         width={150}

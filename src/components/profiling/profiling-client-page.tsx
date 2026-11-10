@@ -86,6 +86,8 @@ import { toast } from "@/hooks/use-toast";
 import { AddIndividualDialog } from "./add-individual-dialog";
 import { AddHouseholdDialog } from "./add-household-dialog";
 import { BenefitsTab } from "./benefits-tab";
+import { usePagination } from "@/hooks/use-pagination";
+import { PaginationControl } from "@/components/ui/pagination-control";
 
 const DEFAULT_FILTER: ProfilingFilter = {
   purok: null,
@@ -176,6 +178,26 @@ export function ProfilingClientPage() {
     });
   }, [residents, filter, puroks]);
 
+  const {
+    currentPage: masterlistPage,
+    pageSize: masterlistPageSize,
+    totalPages: masterlistTotalPages,
+    totalItems: masterlistTotalItems,
+    paginatedItems: paginatedResidents,
+    setCurrentPage: setMasterlistPage,
+    setPageSize: setMasterlistPageSize,
+  } = usePagination(filteredResidents, { initialPageSize: 10 });
+
+  const {
+    currentPage: householdsPage,
+    pageSize: householdsPageSize,
+    totalPages: householdsTotalPages,
+    totalItems: householdsTotalItems,
+    paginatedItems: paginatedHouseholds,
+    setCurrentPage: setHouseholdsPage,
+    setPageSize: setHouseholdsPageSize,
+  } = usePagination(households, { initialPageSize: 10 });
+
   // ── Hidden field groups based on role ──
   const hiddenGroups = getHiddenFieldGroups(role, isSuperAdmin);
   const showVoter = !hiddenGroups.includes("voter");
@@ -211,7 +233,7 @@ export function ProfilingClientPage() {
   };
 
   const handleExportPdf = () => {
-    exportMasterlistPdf(filteredResidents, barangayName, "Barangay Masterlist");
+    exportMasterlistPdf(filteredResidents, barangayConfig || barangayName, "Barangay Masterlist");
     audit("export", `Exported masterlist to PDF (${filteredResidents.length} records)`);
   };
 
@@ -221,7 +243,7 @@ export function ProfilingClientPage() {
   };
 
   const handleExportHouseholdsPdf = () => {
-    exportHouseholdsPdf(households, barangayName);
+    exportHouseholdsPdf(households, barangayConfig || barangayName);
     audit("export", `Exported household list to PDF (${households.length} records)`);
   };
 
@@ -310,42 +332,42 @@ export function ProfilingClientPage() {
   const totalEligibleUnreg = residents.filter((r) => r.isEligibleUnregistered).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#172B4D]">
             Barangay Profiling
           </h1>
-          <p className="text-muted-foreground">
-            Masterlist, households, beneficiaries, voters, and sector groups for{" "}
+          <p className="text-sm text-[#718096] mt-1">
+            Masterlist, households, beneficiaries, voters, and sector demographics for{" "}
             {barangayName}.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {canImportData(role, isSuperAdmin) && (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F8FAFC] h-9 gap-1.5 shadow-xs bg-white">
               <Link href="/profiling/import">
-                <Upload className="mr-2 h-4 w-4" />
+                <Upload className="h-3.5 w-3.5 text-[#246BDE]" />
                 Import
               </Link>
             </Button>
           )}
           {canImportData(role, isSuperAdmin) && (
-            <Button variant="outline" onClick={downloadImportTemplate}>
-              <Download className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={downloadImportTemplate} className="rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F8FAFC] h-9 gap-1.5 shadow-xs bg-white">
+              <Download className="h-3.5 w-3.5 text-[#246BDE]" />
               Template
             </Button>
           )}
           {canExportExcel(role, isSuperAdmin) && (
-            <Button variant="outline" onClick={handleExportExcel}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={handleExportExcel} className="rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F8FAFC] h-9 gap-1.5 shadow-xs bg-white">
+              <FileSpreadsheet className="h-3.5 w-3.5 text-[#10A875]" />
               Export Excel
             </Button>
           )}
           {canExportPdf(role, isSuperAdmin) && (
-            <Button variant="outline" onClick={handleExportPdf}>
-              <FileText className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={handleExportPdf} className="rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F8FAFC] h-9 gap-1.5 shadow-xs bg-white">
+              <FileText className="h-3.5 w-3.5 text-[#EF4655]" />
               Export PDF
             </Button>
           )}
@@ -353,49 +375,57 @@ export function ProfilingClientPage() {
       </div>
 
       <Tabs defaultValue="masterlist" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
-          <TabsTrigger value="masterlist">
+        <TabsList className="bg-white p-1 border border-[#E5EAF2] rounded-xl grid w-full grid-cols-2 sm:grid-cols-5 shadow-xs">
+          <TabsTrigger value="masterlist" className="rounded-lg text-xs font-semibold data-[state=active]:bg-[#246BDE] data-[state=active]:text-white text-[#718096] py-2">
             <Users className="mr-2 h-4 w-4" />
             Masterlist
           </TabsTrigger>
-          <TabsTrigger value="households">
+          <TabsTrigger value="households" className="rounded-lg text-xs font-semibold data-[state=active]:bg-[#246BDE] data-[state=active]:text-white text-[#718096] py-2">
             <Home className="mr-2 h-4 w-4" />
             Households
           </TabsTrigger>
-          <TabsTrigger value="benefits">
+          <TabsTrigger value="benefits" className="rounded-lg text-xs font-semibold data-[state=active]:bg-[#246BDE] data-[state=active]:text-white text-[#718096] py-2">
             <ShieldCheck className="mr-2 h-4 w-4" />
             Benefits
           </TabsTrigger>
-          <TabsTrigger value="dashboard">
+          <TabsTrigger value="dashboard" className="rounded-lg text-xs font-semibold data-[state=active]:bg-[#246BDE] data-[state=active]:text-white text-[#718096] py-2">
             <BarChart3 className="mr-2 h-4 w-4" />
-            Dashboard
+            Demographics
           </TabsTrigger>
-          <TabsTrigger value="reports">
+          <TabsTrigger value="reports" className="rounded-lg text-xs font-semibold data-[state=active]:bg-[#246BDE] data-[state=active]:text-white text-[#718096] py-2">
             <FileText className="mr-2 h-4 w-4" />
             Reports
           </TabsTrigger>
         </TabsList>
 
         {/* ── MASTERLIST TAB ── */}
-        <TabsContent value="masterlist" className="space-y-4">
+        <TabsContent value="masterlist" className="space-y-4 pt-2">
           {/* Add button */}
           {canEditData(role, isSuperAdmin) && (
             <div className="flex justify-end">
-              <Button onClick={() => setIsAddIndividualOpen(true)}>
+              <Button onClick={() => setIsAddIndividualOpen(true)} className="bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl shadow-xs font-semibold text-xs h-10 px-4">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Individual
               </Button>
             </div>
           )}
           {/* Filter Bar */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Filter className="h-4 w-4" />
-                Filters
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E5EAF2] pb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#172B4D]">
+                <Filter className="h-4 w-4 text-[#246BDE]" />
+                <span>Filter Masterlist Records</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFilter(DEFAULT_FILTER)}
+                className="text-xs text-[#718096] hover:text-[#172B4D] hover:bg-[#F0F4FA] rounded-lg h-8"
+              >
+                Clear filters
+              </Button>
+            </div>
+            <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Search */}
                 <Input
@@ -404,7 +434,7 @@ export function ProfilingClientPage() {
                   onChange={(e) =>
                     setFilter({ ...filter, searchText: e.target.value })
                   }
-                  className="h-9"
+                  className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-xs text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
                 />
 
                 {/* Purok */}
@@ -566,8 +596,8 @@ export function ProfilingClientPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <div className="flex items-center justify-between text-xs text-[#718096] pt-1">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-[#172B4D]">
                   <input
                     type="checkbox"
                     checked={filter.eligibleUnregisteredOnly}
@@ -577,33 +607,24 @@ export function ProfilingClientPage() {
                         eligibleUnregisteredOnly: e.target.checked,
                       })
                     }
-                    className="h-4 w-4 rounded border-input"
+                    className="h-4 w-4 rounded border-[#E2E8F0] text-[#246BDE] focus:ring-[#246BDE]"
                   />
                   Eligible but unregistered only
                 </label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFilter(DEFAULT_FILTER)}
-                >
-                  Clear filters
-                </Button>
+                <p>
+                  Showing <strong className="text-[#172B4D]">{filteredResidents.length}</strong> of{" "}
+                  <strong className="text-[#172B4D]">{totalResidents}</strong> individuals
+                </p>
               </div>
-
-              <p className="text-sm text-muted-foreground">
-                Showing{" "}
-                <strong>{filteredResidents.length}</strong> of{" "}
-                {totalResidents} individuals
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Masterlist Table */}
-          <div className="rounded-lg border shadow-sm overflow-hidden">
+          <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableRow className="border-b border-[#E5EAF2] bg-[#F8FAFC] text-xs font-semibold text-[#718096]">
                     <TableHead className="font-semibold">#</TableHead>
                     <TableHead className="font-semibold">Name</TableHead>
                     <TableHead className="font-semibold">Sex</TableHead>
@@ -628,9 +649,9 @@ export function ProfilingClientPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredResidents.map((r, idx) => (
+                    paginatedResidents.map((r, idx) => (
                       <TableRow key={r.id}>
-                        <TableCell>{idx + 1}</TableCell>
+                        <TableCell>{(masterlistPage - 1) * masterlistPageSize + idx + 1}</TableCell>
                         <TableCell className="font-medium">
                           {r.firstName} {r.middleName ?? ""} {r.lastName}{" "}
                           {r.extension ?? ""}
@@ -695,6 +716,20 @@ export function ProfilingClientPage() {
                 </TableBody>
               </Table>
             </div>
+
+            {filteredResidents.length > 0 && (
+              <div className="border-t border-[#E5EAF2] px-4 py-2 bg-[#F8FAFC]">
+                <PaginationControl
+                  currentPage={masterlistPage}
+                  totalPages={masterlistTotalPages}
+                  totalItems={masterlistTotalItems}
+                  pageSize={masterlistPageSize}
+                  onPageChange={setMasterlistPage}
+                  onPageSizeChange={setMasterlistPageSize}
+                  itemLabel="individuals"
+                />
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -748,7 +783,7 @@ export function ProfilingClientPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    households.map((h) => (
+                    paginatedHouseholds.map((h) => (
                       <TableRow key={h.id}>
                         <TableCell className="font-mono text-xs">{h.id}</TableCell>
                         <TableCell>{h.purokName || h.purokId || "—"}</TableCell>
@@ -768,6 +803,20 @@ export function ProfilingClientPage() {
                 </TableBody>
               </Table>
             </div>
+
+            {households.length > 0 && (
+              <div className="border-t border-[#E5EAF2] px-4 py-2 bg-[#F8FAFC]">
+                <PaginationControl
+                  currentPage={householdsPage}
+                  totalPages={householdsTotalPages}
+                  totalItems={householdsTotalItems}
+                  pageSize={householdsPageSize}
+                  onPageChange={setHouseholdsPage}
+                  onPageSizeChange={setHouseholdsPageSize}
+                  itemLabel="households"
+                />
+              </div>
+            )}
           </div>
         </TabsContent>
 

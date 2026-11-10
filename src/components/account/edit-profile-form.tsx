@@ -96,59 +96,54 @@ export function EditProfileForm() {
   
   if (!resident) {
     return (
-        <Card className="border-t-4 border-t-purple-500">
-            <CardHeader>
-                <CardTitle>Edit Profile</CardTitle>
-            </CardHeader>
-            <CardContent className="flex justify-center items-center p-8">
-                <Loader2 className="animate-spin h-8 w-8 text-primary" />
-            </CardContent>
-        </Card>
-    )
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white p-8 shadow-sm flex justify-center items-center">
+        <Loader2 className="animate-spin h-8 w-8 text-[#246BDE]" />
+      </div>
+    );
   }
 
   return (
-    <Card className="border-t-4 border-t-purple-500 hover:shadow-xl transition-all">
+    <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950">
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <User className="h-6 w-6 text-purple-600" />
-              Edit Profile
-            </CardTitle>
-            <CardDescription className="text-base">
-              Update your personal information and contact details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
+          <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+            <h3 className="flex items-center gap-2.5 text-lg font-bold text-[#172B4D]">
+              <User className="size-5 text-[#246BDE]" />
+              Resident Profile Information
+            </h3>
+            <p className="text-xs sm:text-sm text-[#718096] mt-1">
+              View your registered constituent details and update your contact location.
+            </p>
+          </div>
+          <div className="p-6 space-y-6">
             {/* Profile Header with Avatar */}
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-lg border-2 border-purple-200 dark:border-purple-800">
-              <Avatar className="h-20 w-20 border-4 border-purple-300 dark:border-purple-700">
+            <div className="flex items-center gap-4 p-4 bg-[#EAF2FF] rounded-2xl border border-[#BFDBFE]">
+              <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
                 <AvatarImage src={resident.avatarUrl || undefined} alt={resident.firstName} />
-                <AvatarFallback className="bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 text-2xl font-bold">
+                <AvatarFallback className="bg-white text-[#246BDE] text-xl font-bold">
                   {resident.firstName?.[0]}
                   {resident.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold">{resident.firstName} {resident.lastName}</h3>
-                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                  <Mail className="h-3 w-3" />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-[#172B4D] leading-tight truncate">{resident.firstName} {resident.lastName}</h3>
+                <p className="text-xs text-[#718096] flex items-center gap-1.5 mt-1 truncate">
+                  <Mail className="size-3.5 text-[#246BDE] shrink-0" />
                   {resident.email}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  User ID: <span className="font-mono font-semibold">{resident.userId}</span>
+                <p className="text-xs text-[#718096] mt-1">
+                  User ID: <span className="font-mono font-semibold text-[#246BDE]">{resident.userId}</span>
                 </p>
               </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-[#E5EAF2]" />
 
             {/* Editable Fields Section */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-purple-600" />
-                Location Information
+              <h4 className="font-bold text-sm text-[#172B4D] flex items-center gap-2">
+                <MapPin className="size-4 text-[#246BDE]" />
+                Location &amp; Household Information
               </h4>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -157,14 +152,14 @@ export function EditProfileForm() {
                   name="purok"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-purple-600" />
+                      <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-[#172B4D]">
+                        <Home className="size-3.5 text-[#246BDE]" />
                         Purok / Sitio
                       </FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g., Purok 1, Sitio Riverside" 
-                          className="h-11"
+                          className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
                           {...field} 
                         />
                       </FormControl>
@@ -177,14 +172,14 @@ export function EditProfileForm() {
                   name="householdNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Hash className="h-4 w-4 text-purple-600" />
+                      <FormLabel className="flex items-center gap-1.5 text-xs font-semibold text-[#172B4D]">
+                        <Hash className="size-3.5 text-[#246BDE]" />
                         Household Number
                       </FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g., HH-001" 
-                          className="h-11"
+                          className="h-10 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
                           {...field} 
                         />
                       </FormControl>
@@ -195,81 +190,59 @@ export function EditProfileForm() {
               </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-[#E5EAF2]" />
 
             {/* Read-Only Information */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-purple-600" />
-                Personal Information
+              <h4 className="font-bold text-sm text-[#172B4D] flex items-center gap-2">
+                <User className="size-4 text-[#246BDE]" />
+                Personal Verification Details
               </h4>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Full Name
-                  </label>
-                  <div className="p-3 bg-muted rounded-lg border">
-                    <p className="font-semibold">{resident.firstName} {resident.lastName}</p>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="space-y-1 p-3 rounded-xl border border-[#E5EAF2] bg-[#F8FAFC]">
+                  <span className="text-[#718096]">Full Name</span>
+                  <p className="font-semibold text-sm text-[#172B4D]">{resident.firstName} {resident.lastName}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Email Address
-                  </label>
-                  <div className="p-3 bg-muted rounded-lg border">
-                    <p className="font-semibold text-sm">{resident.email}</p>
-                  </div>
+                <div className="space-y-1 p-3 rounded-xl border border-[#E5EAF2] bg-[#F8FAFC]">
+                  <span className="text-[#718096]">Email Address</span>
+                  <p className="font-semibold text-sm text-[#172B4D]">{resident.email}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Date of Birth
-                  </label>
-                  <div className="p-3 bg-muted rounded-lg border">
-                    <p className="font-semibold">{resident.birthdate}</p>
-                  </div>
+                <div className="space-y-1 p-3 rounded-xl border border-[#E5EAF2] bg-[#F8FAFC]">
+                  <span className="text-[#718096]">Date of Birth</span>
+                  <p className="font-semibold text-sm text-[#172B4D]">{resident.birthdate}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Complete Address
-                  </label>
-                  <div className="p-3 bg-muted rounded-lg border">
-                    <p className="font-semibold text-sm">{resident.address}</p>
-                  </div>
+                <div className="space-y-1 p-3 rounded-xl border border-[#E5EAF2] bg-[#F8FAFC]">
+                  <span className="text-[#718096]">Complete Address</span>
+                  <p className="font-semibold text-sm text-[#172B4D]">{resident.address}</p>
                 </div>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>ℹ️ Note:</strong> Your name, email, birthdate, and full address cannot be changed here. 
-                  Please contact your barangay administrator for assistance with these fields.
+              <div className="bg-[#EAF2FF] border border-[#BFDBFE] rounded-xl p-3.5">
+                <p className="text-xs text-[#246BDE]">
+                  <strong>ℹ️ Note:</strong> Core demographic fields are verified against the masterlist. Contact the barangay secretary if your personal name or birthdate requires correction.
                 </p>
               </div>
             </div>
-          </CardContent>
-          <CardFooter className="bg-muted/50 flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              Changes will be saved immediately
+          </div>
+          <div className="p-4 bg-[#F8FAFC] border-t border-[#E5EAF2] flex flex-col sm:flex-row justify-between items-center gap-3">
+            <p className="text-xs text-[#718096]">
+              Changes will take effect immediately upon saving
             </p>
             <Button 
               type="submit" 
               disabled={isSaving}
-              size="lg"
-              className="bg-purple-600 hover:bg-purple-700"
+              className="w-full sm:w-auto bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl font-semibold text-xs h-10 px-5 shadow-xs"
             >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSaving ? 'Saving Changes...' : 'Save Changes'}
+              {isSaving ? 'Saving Changes...' : 'Save Profile Changes'}
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
-    </Card>
+    </div>
   );
 }

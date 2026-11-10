@@ -23,7 +23,18 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { useAppContext } from "@/contexts/app-context";
 import { useMemo, useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { FileText, User, MapPin, Banknote } from "lucide-react";
+import {
+  FileText,
+  User,
+  MapPin,
+  Banknote,
+  FileCheck,
+  Home,
+  HandHeart,
+  Briefcase,
+  Award,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const formSchema = z.object({
@@ -39,13 +50,13 @@ const DOCUMENT_PRICES: Record<string, number> = {
   'Solo Parent Certificate': 0.00,
 };
 
-const DOCUMENT_ICONS: Record<string, string> = {
-  'Barangay Clearance': '📋',
-  'Certificate of Residency': '🏠',
-  'Certificate of Indigency': '🤝',
-  'Business Permit': '💼',
-  'Good Moral Character Certificate': '⭐',
-  'Solo Parent Certificate': '👨‍👧',
+const DOCUMENT_ICON_MAP: Record<string, { icon: any; color: string; bg: string }> = {
+  'Barangay Clearance': { icon: FileCheck, color: 'text-[#246BDE]', bg: 'bg-[#EAF2FF]' },
+  'Certificate of Residency': { icon: Home, color: 'text-[#10A875]', bg: 'bg-[#ECFDF5]' },
+  'Certificate of Indigency': { icon: HandHeart, color: 'text-[#FFA51E]', bg: 'bg-[#FFF7ED]' },
+  'Business Permit': { icon: Briefcase, color: 'text-[#8B5CF6]', bg: 'bg-[#F3E8FF]' },
+  'Good Moral Character Certificate': { icon: Award, color: 'text-[#F59E0B]', bg: 'bg-[#FEF3C7]' },
+  'Solo Parent Certificate': { icon: Users, color: 'text-[#EC4899]', bg: 'bg-[#FCE7F3]' },
 };
 
 export function RequestForm() {
@@ -67,8 +78,8 @@ export function RequestForm() {
   }, [currentUser, residents]);
 
   // Use barangay-specific pricing if available, otherwise fall back to defaults
-  const pricing = documentPricing || DOCUMENT_PRICES;
-  const selectedPrice = pricing[selectedDoc as keyof typeof DOCUMENT_PRICES] || 0;
+  const pricing: Record<string, number> = (documentPricing || DOCUMENT_PRICES) as Record<string, number>;
+  const selectedPrice = pricing[selectedDoc] || 0;
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -100,25 +111,25 @@ export function RequestForm() {
   }
 
   return (
-    <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
+    <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <FileText className="h-6 w-6 text-blue-600" />
+          <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+            <h3 className="flex items-center gap-2.5 text-xl font-bold text-[#172B4D]">
+              <FileText className="size-5 text-[#246BDE]" />
               New Document Request
-            </CardTitle>
-            <CardDescription className="text-base">
-              Select a document to request. Your information will be auto-filled.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6 pt-6">
+            </h3>
+            <p className="text-xs sm:text-sm text-[#718096] mt-1">
+              Select a document to request. Your verified profile details will be auto-filled.
+            </p>
+          </div>
+          <div className="grid gap-5 p-6">
             <FormField
               control={form.control}
               name="documentType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base font-semibold">Document Type</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-[#172B4D]">Document Type</FormLabel>
                   <Select 
                     onValueChange={(value) => {
                       field.onChange(value);
@@ -127,22 +138,48 @@ export function RequestForm() {
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger className="h-12 text-base">
-                        <SelectValue placeholder="Select a document to request" />
+                      <SelectTrigger className="h-11 rounded-xl border-[#E2E8F0] bg-[#F0F4FA] text-sm text-[#172B4D] focus:bg-white focus:border-[#246BDE]">
+                        <div className="flex items-center gap-2.5">
+                          {(() => {
+                            const itemConfig = DOCUMENT_ICON_MAP[selectedDoc] || {
+                              icon: FileCheck,
+                              color: 'text-[#246BDE]',
+                              bg: 'bg-[#EAF2FF]',
+                            };
+                            const DocIcon = itemConfig.icon;
+                            return (
+                              <span
+                                className={`flex size-6 items-center justify-center rounded-md ${itemConfig.bg} ${itemConfig.color} shrink-0`}
+                              >
+                                <DocIcon className="size-3.5" />
+                              </span>
+                            );
+                          })()}
+                          <SelectValue placeholder="Select a document to request" />
+                        </div>
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border-[#E5EAF2]">
                       {(Object.keys(pricing) as Array<keyof typeof DOCUMENT_PRICES>).map((docType) => {
                         const price = pricing[docType];
-                        const icon = DOCUMENT_ICONS[docType];
+                        const itemConfig = DOCUMENT_ICON_MAP[docType] || {
+                          icon: FileText,
+                          color: 'text-[#246BDE]',
+                          bg: 'bg-[#EAF2FF]',
+                        };
+                        const DocIcon = itemConfig.icon;
                         return (
-                          <SelectItem key={docType} value={docType} className="text-base py-3">
+                          <SelectItem key={docType} value={docType} className="text-sm py-2.5 rounded-lg cursor-pointer">
                             <div className="flex items-center justify-between w-full gap-4">
-                              <span className="flex items-center gap-2">
-                                <span>{icon}</span>
-                                {docType}
+                              <span className="flex items-center gap-2.5 text-[#172B4D]">
+                                <span
+                                  className={`flex size-6 items-center justify-center rounded-md ${itemConfig.bg} ${itemConfig.color} shrink-0`}
+                                >
+                                  <DocIcon className="size-3.5" />
+                                </span>
+                                <span className="font-medium">{docType}</span>
                               </span>
-                              <span className={`text-sm font-semibold ${price === 0 ? 'text-green-600' : 'text-blue-600'}`}>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${price === 0 ? 'bg-[#ECFDF5] text-[#10A875]' : 'bg-[#EAF2FF] text-[#246BDE]'}`}>
                                 {price === 0 ? 'FREE' : `₱${price.toFixed(2)}`}
                               </span>
                             </div>
@@ -157,71 +194,69 @@ export function RequestForm() {
             />
 
             {/* Price Display */}
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-4 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+            <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E5EAF2]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Banknote className="h-5 w-5 text-blue-600" />
-                  <span className="font-semibold text-lg">Document Fee:</span>
+                  <Banknote className="size-5 text-[#246BDE]" />
+                  <span className="font-semibold text-sm text-[#172B4D]">Official Document Fee:</span>
                 </div>
                 {selectedPrice === 0 ? (
-                  <Badge className="bg-green-600 text-white text-lg px-4 py-1">FREE</Badge>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#ECFDF5] text-[#10A875] border border-[#A7F3D0]">
+                    FREE
+                  </span>
                 ) : (
-                  <span className="text-2xl font-bold text-blue-600">
+                  <span className="text-xl font-bold text-[#246BDE]">
                     ₱{selectedPrice.toFixed(2)}
                   </span>
                 )}
               </div>
               {selectedPrice === 0 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  This document is provided free of charge
+                <p className="text-xs text-[#718096] mt-1.5">
+                  This document is provided free of charge for barangay constituents.
                 </p>
               )}
             </div>
 
             {resident && (
-              <div className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950 p-5 rounded-lg space-y-3 border-2 border-purple-200 dark:border-purple-800">
-                <h4 className="font-semibold text-lg flex items-center gap-2">
-                  <User className="h-5 w-5 text-purple-600" />
-                  Your Information (Auto-filled)
+              <div className="bg-[#EAF2FF] p-4 rounded-xl border border-[#BFDBFE] space-y-2.5">
+                <h4 className="font-bold text-xs uppercase tracking-wide text-[#246BDE] flex items-center gap-2">
+                  <User className="size-4" />
+                  Constituent Information (Auto-Filled)
                 </h4>
-                <div className="space-y-2 pl-7">
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm font-medium text-muted-foreground min-w-[70px]">Name:</span>
-                    <span className="text-sm font-semibold">{resident.firstName} {resident.lastName}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[#718096]">Full Name:</span>
+                    <p className="font-semibold text-[#172B4D]">{resident.firstName} {resident.lastName}</p>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-purple-600 mt-0.5" />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-muted-foreground">Address:</span>
-                      <p className="text-sm font-semibold">{resident.address}</p>
-                    </div>
+                  <div>
+                    <span className="text-[#718096]">Barangay Address:</span>
+                    <p className="font-semibold text-[#172B4D]">{resident.address}</p>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>📌 Note:</strong> After submitting, you'll receive a tracking number to monitor your request status. 
-                {selectedPrice > 0 && " Payment will be required after approval."}
+            <div className="bg-[#FFF7ED] border border-[#FED7AA] rounded-xl p-3.5">
+              <p className="text-xs text-[#FFA51E]">
+                <strong className="text-[#172B4D]">📌 Note:</strong> After submitting, you will receive a tracking number to monitor your request status.
+                {selectedPrice > 0 && " Payment verification will be required upon document approval."}
               </p>
             </div>
-          </CardContent>
-          <CardFooter className="bg-muted/50 flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              Processing time: 1-3 business days
+          </div>
+          <div className="p-4 bg-[#F8FAFC] border-t border-[#E5EAF2] flex flex-col sm:flex-row justify-between items-center gap-3">
+            <p className="text-xs text-[#718096]">
+              Standard processing time: 1–2 business days
             </p>
             <Button 
               type="submit" 
-              size="lg"
-              className="bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-105"
+              className="w-full sm:w-auto bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl font-semibold text-xs h-10 px-5 shadow-xs"
             >
-              <FileText className="mr-2 h-5 w-5" />
+              <FileText className="mr-2 size-4" />
               Submit Request
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
-    </Card>
+    </div>
   );
 }

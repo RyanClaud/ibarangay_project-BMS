@@ -60,6 +60,8 @@ docs/*.md
 !docs/PROFILING_MODULE_DESIGN.md
 !docs/PROFILING_USER_GUIDE.md
 !docs/INFRASTRUCTURE_LAYER.md
+!docs/system-modeling-and-17-diagrams.md
+!docs/PROJECT_PROPOSAL_REVISED.md
 
 # Setup scripts (local environment only)
 setup-vercel-env.ps1

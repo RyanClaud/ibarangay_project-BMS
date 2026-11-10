@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, CheckCircle, XCircle, FileSearch, Check, Trash2, Upload } from "lucide-react";
+import { MoreHorizontal, CheckCircle, XCircle, FileSearch, Check, Trash2, Upload, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,15 +31,17 @@ import { PaymentUploadDialog } from "./payment-upload-dialog";
 import { PaymentVerificationDialog } from "./payment-verification-dialog";
 import { PaymentReceipt } from "./payment-receipt";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { usePagination } from "@/hooks/use-pagination";
+import { PaginationControl } from "@/components/ui/pagination-control";
 
 const statusColors: Record<DocumentRequestStatus, string> = {
-  Pending: "bg-amber-100 text-amber-800 border-amber-200",
-  Approved: "bg-sky-100 text-sky-800 border-sky-200",
-  "Payment Submitted": "bg-purple-100 text-purple-800 border-purple-200",
-  "Payment Verified": "bg-blue-100 text-blue-800 border-blue-200",
-  "Ready for Pickup": "bg-emerald-100 text-emerald-800 border-emerald-200",
-  Released: "bg-green-100 text-green-800 border-green-200",
-  Rejected: "bg-red-100 text-red-800 border-red-200",
+  Pending: "bg-[#FFF7ED] text-[#FFA51E] border-[#FED7AA]",
+  Approved: "bg-[#ECFDF5] text-[#10A875] border-[#A7F3D0]",
+  "Payment Submitted": "bg-[#F3E8FF] text-[#8B5CF6] border-[#E9D5FF]",
+  "Payment Verified": "bg-[#EAF2FF] text-[#246BDE] border-[#BFDBFE]",
+  "Ready for Pickup": "bg-[#ECFDF5] text-[#10A875] border-[#A7F3D0]",
+  Released: "bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]",
+  Rejected: "bg-[#FEF2F2] text-[#EF4655] border-[#FECACA]",
 };
 
 const TABS: DocumentRequestStatus[] = ["Pending", "Approved", "Payment Submitted", "Payment Verified", "Ready for Pickup", "Released", "Rejected"];
@@ -75,12 +77,24 @@ export function DocumentRequestClientPage() {
     router.push(`/documents/certificate/${requestId}`);
   };
 
-  const filteredData = (documentRequests || []).filter(
-    (request) =>
-      (request.residentName.toLowerCase().includes(filter.toLowerCase()) ||
-      (request.trackingNumber && request.trackingNumber.toLowerCase().includes(filter.toLowerCase()))) &&
-      (activeTab === 'All' || request.status === activeTab)
-  ).sort((a,b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
+  const filteredData = React.useMemo(() => {
+    return (documentRequests || []).filter(
+      (request) =>
+        (request.residentName.toLowerCase().includes(filter.toLowerCase()) ||
+        (request.trackingNumber && request.trackingNumber.toLowerCase().includes(filter.toLowerCase()))) &&
+        (activeTab === 'All' || request.status === activeTab)
+    ).sort((a,b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
+  }, [documentRequests, filter, activeTab]);
+
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedItems,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredData, { initialPageSize: 10 });
 
   // Role-based permissions
   const canApprove = currentUser?.role === 'Admin' || currentUser?.role === 'Barangay Captain' || currentUser?.role === 'Secretary';
@@ -111,52 +125,52 @@ export function DocumentRequestClientPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-gradient-to-r from-orange-50 to-transparent dark:from-orange-950 rounded-lg border">
+    <div className="space-y-4 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-[#E5EAF2] bg-white shadow-xs">
         <Input
-          placeholder="🔍 Search by name or tracking number..."
+          placeholder="Search by resident name or tracking number..."
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
-          className="max-w-full sm:max-w-sm h-11"
+          className="max-w-full sm:max-w-md h-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE] outline-none"
         />
-        <div className="text-sm text-muted-foreground">
-          {filteredData.length} {filteredData.length === 1 ? 'request' : 'requests'}
+        <div className="text-xs font-semibold text-[#718096]">
+          {filteredData.length} {filteredData.length === 1 ? 'request' : 'requests'} found
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 h-auto p-1">
-          <TabsTrigger value="All" className="text-xs sm:text-sm">All</TabsTrigger>
-          <TabsTrigger value="Pending" className="text-xs sm:text-sm">Pending</TabsTrigger>
-          <TabsTrigger value="Approved" className="text-xs sm:text-sm">Approved</TabsTrigger>
-          <TabsTrigger value="Payment Submitted" className="text-xs sm:text-sm">Payment</TabsTrigger>
-          <TabsTrigger value="Payment Verified" className="text-xs sm:text-sm">Verified</TabsTrigger>
-          <TabsTrigger value="Ready for Pickup" className="text-xs sm:text-sm">Ready</TabsTrigger>
-          <TabsTrigger value="Released" className="text-xs sm:text-sm">Released</TabsTrigger>
-          <TabsTrigger value="Rejected" className="text-xs sm:text-sm">Rejected</TabsTrigger>
+        <TabsList className="bg-white p-1 border border-[#E5EAF2] rounded-xl h-auto grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1">
+          <TabsTrigger value="All" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">All</TabsTrigger>
+          <TabsTrigger value="Pending" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">Pending</TabsTrigger>
+          <TabsTrigger value="Approved" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">Approved</TabsTrigger>
+          <TabsTrigger value="Payment Submitted" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">Payment</TabsTrigger>
+          <TabsTrigger value="Payment Verified" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">Verified</TabsTrigger>
+          <TabsTrigger value="Ready for Pickup" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">Ready</TabsTrigger>
+          <TabsTrigger value="Released" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">Released</TabsTrigger>
+          <TabsTrigger value="Rejected" className="text-xs rounded-lg data-[state=active]:bg-[#246BDE] data-[state=active]:text-white">Rejected</TabsTrigger>
         </TabsList>
       </Tabs>
       
-      <div className="rounded-lg border shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white overflow-hidden shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="hidden sm:table-cell font-semibold">Tracking No.</TableHead>
-              <TableHead className="font-semibold">Resident</TableHead>
-              <TableHead className="hidden md:table-cell font-semibold">Document</TableHead>
-              <TableHead className="hidden lg:table-cell font-semibold">Date Requested</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="text-right font-semibold">
+            <TableRow className="border-b border-[#E5EAF2] bg-[#F8FAFC] text-xs font-semibold text-[#718096] hover:bg-[#F8FAFC]">
+              <TableHead className="hidden sm:table-cell font-semibold text-[#718096]">Tracking No.</TableHead>
+              <TableHead className="font-semibold text-[#718096]">Resident</TableHead>
+              <TableHead className="hidden md:table-cell font-semibold text-[#718096]">Document</TableHead>
+              <TableHead className="hidden lg:table-cell font-semibold text-[#718096]">Date Requested</TableHead>
+              <TableHead className="font-semibold text-[#718096]">Status</TableHead>
+              <TableHead className="text-right font-semibold text-[#718096]">
                 Actions
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length ? (
-              filteredData.map((request) => (
+            {paginatedItems.length ? (
+              paginatedItems.map((request) => (
                 <TableRow key={request.id} className="hover:bg-muted/30 transition-colors">
                   <TableCell className="font-medium hidden sm:table-cell">
-                    <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded text-xs font-mono">
+                    <span className="px-2.5 py-1 bg-[#EAF2FF] text-[#246BDE] rounded-lg text-xs font-mono font-semibold">
                       {request.trackingNumber}
                     </span>
                   </TableCell>
@@ -195,7 +209,7 @@ export function DocumentRequestClientPage() {
                           size="sm"
                           variant="default"
                           onClick={() => handleStatusChange(request.id, 'Approved')}
-                          className="w-full bg-sky-600 hover:bg-sky-700"
+                          className="w-full bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-lg text-xs"
                         >
                           <CheckCircle className="mr-2 h-3 w-3" />
                           Approve
@@ -207,7 +221,7 @@ export function DocumentRequestClientPage() {
                           size="sm"
                           variant="default"
                           onClick={() => handleUploadPayment(request)}
-                          className="w-full"
+                          className="w-full bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-lg text-xs"
                         >
                           <Upload className="mr-2 h-3 w-3" />
                           Upload Payment
@@ -215,7 +229,7 @@ export function DocumentRequestClientPage() {
                       )}
                       {/* Show Free badge for approved free documents */}
                       {isResident && request.status === 'Approved' && request.residentId === currentUser?.id && request.amount === 0 && (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Badge variant="outline" className="bg-[#ECFDF5] text-[#10A875] border-[#A7F3D0]">
                           Free - No Payment Required
                         </Badge>
                       )}
@@ -225,7 +239,7 @@ export function DocumentRequestClientPage() {
                           size="sm"
                           variant="default"
                           onClick={() => handleStatusChange(request.id, 'Ready for Pickup')}
-                          className="w-full bg-green-600 hover:bg-green-700"
+                          className="w-full bg-[#10A875] hover:bg-[#0D875E] text-white rounded-lg text-xs"
                         >
                           <Check className="mr-2 h-3 w-3" />
                           Mark Ready
@@ -237,7 +251,7 @@ export function DocumentRequestClientPage() {
                           size="sm"
                           variant="default"
                           onClick={() => handleStatusChange(request.id, 'Released')}
-                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          className="w-full bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-lg text-xs"
                         >
                           <Check className="mr-2 h-3 w-3" />
                           Mark Released
@@ -249,7 +263,7 @@ export function DocumentRequestClientPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleViewReceipt(request)}
-                          className="w-full"
+                          className="w-full rounded-lg border-[#E5EAF2] hover:bg-[#F8FAFC] text-xs font-semibold"
                         >
                           View Receipt
                         </Button>
@@ -259,8 +273,8 @@ export function DocumentRequestClientPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost" className="hover:bg-orange-100 dark:hover:bg-orange-900">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button aria-haspopup="true" size="icon" variant="ghost" className="hover:bg-[#F0F4FA] rounded-lg">
+                          <MoreHorizontal className="h-4 w-4 text-[#718096]" />
                           <span className="sr-only">Toggle menu</span>
                         </Button>
                       </DropdownMenuTrigger>
@@ -354,17 +368,33 @@ export function DocumentRequestClientPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <span className="text-4xl">📄</span>
-                    <p className="font-medium">No requests found</p>
-                    <p className="text-sm">Try adjusting your filters or check another status tab</p>
+                <TableCell colSpan={6} className="h-40 text-center py-10">
+                  <div className="flex flex-col items-center justify-center gap-1.5">
+                    <div className="flex size-12 items-center justify-center rounded-2xl bg-[#F0F4FA] text-[#718096]">
+                      <FileText className="size-6 text-[#718096]" />
+                    </div>
+                    <p className="font-bold text-sm text-[#172B4D]">No document requests found</p>
+                    <p className="text-xs text-[#718096]">Try adjusting your search criteria or switch to another status tab</p>
                   </div>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+
+        {filteredData.length > 0 && (
+          <div className="border-t border-[#E5EAF2] px-4 py-2 bg-[#F8FAFC]">
+            <PaginationControl
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="requests"
+            />
+          </div>
+        )}
       </div>
 
       {/* Payment Upload Dialog */}

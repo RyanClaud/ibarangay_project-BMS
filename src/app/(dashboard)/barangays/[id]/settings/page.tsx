@@ -210,7 +210,7 @@ export default function BarangaySettingsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{barangay.totalPopulation.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(barangay.totalPopulation ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Total residents</p>
           </CardContent>
         </Card>
@@ -220,7 +220,7 @@ export default function BarangaySettingsPage() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{barangay.totalHouseholds.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(barangay.totalHouseholds ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Registered households</p>
           </CardContent>
         </Card>
@@ -230,7 +230,7 @@ export default function BarangaySettingsPage() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{barangay.totalVoters.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{(barangay.totalVoters ?? 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Registered voters</p>
           </CardContent>
         </Card>

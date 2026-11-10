@@ -20,7 +20,9 @@ interface RequestHistoryProps {
 const statusColors: Record<DocumentRequestStatus, string> = {
   Pending: "bg-amber-100 text-amber-800 border-amber-200",
   Approved: "bg-sky-100 text-sky-800 border-sky-200",
-  Paid: "bg-blue-100 text-blue-800 border-blue-200",
+  "Payment Submitted": "bg-purple-100 text-purple-800 border-purple-200",
+  "Payment Verified": "bg-blue-100 text-blue-800 border-blue-200",
+  "Ready for Pickup": "bg-emerald-100 text-emerald-800 border-emerald-200",
   Released: "bg-green-100 text-green-800 border-green-200",
   Rejected: "bg-red-100 text-red-800 border-red-200",
 };

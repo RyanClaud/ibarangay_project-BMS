@@ -8,6 +8,8 @@
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { resolveBarangayDetails } from "@/lib/reports";
+import type { Barangay } from "@/lib/types";
 
 import type {
   Household,
@@ -324,124 +326,311 @@ function exportDemographicSummaryExcel(
   XLSX.writeFile(wb, `${barangayName}_Demographics_${todayString()}.xlsx`);
 }
 
-// ─── PDF Export ────────────────────────────────────────────────────────
+// ─── PDF Export (Official Philippine LGU Format) ───────────────────────
+
+function drawProfilingOfficialHeader(
+  doc: jsPDF,
+  details: ReturnType<typeof resolveBarangayDetails>,
+  title: string,
+  totalRecords: number,
+  recordTypeLabel: string
+) {
+  const pageWidth = doc.internal.pageSize.width || 297;
+  const centerX = pageWidth / 2;
+
+  // Vector Crests on both sides
+  const drawSeal = (cx: number, cy: number) => {
+    doc.setDrawColor(16, 45, 86);
+    doc.setLineWidth(0.7);
+    doc.circle(cx, cy, 9.5, "S");
+    doc.setDrawColor(255, 165, 30);
+    doc.setLineWidth(0.35);
+    doc.circle(cx, cy, 8, "S");
+    doc.setFillColor(234, 242, 255);
+    doc.circle(cx, cy, 6, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(4.5);
+    doc.setTextColor(16, 45, 86);
+    doc.text("OFFICIAL", cx, cy - 1.8, { align: "center" });
+    doc.text("SEAL", cx, cy + 1, { align: "center" });
+    doc.setFontSize(3.5);
+    doc.setTextColor(255, 165, 30);
+    doc.text("★ ★ ★", cx, cy + 3.2, { align: "center" });
+  };
+
+  drawSeal(28, 19.5);
+  drawSeal(pageWidth - 28, 19.5);
+
+  // Republic Header Texts
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(74, 85, 104);
+  doc.text("Republic of the Philippines", centerX, 11, { align: "center" });
+  doc.text(`Province of ${details.province}`, centerX, 14.5, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(30, 41, 59);
+  doc.text(`MUNICIPALITY OF ${details.municipality.toUpperCase()}`, centerX, 18.5, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(16, 45, 86);
+  doc.text(`BARANGAY ${details.name.toUpperCase()}`, centerX, 24, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(36, 107, 222);
+  doc.text("OFFICE OF THE SANGGUNIANG BARANGAY", centerX, 28, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(113, 128, 150);
+  doc.text(
+    `${details.address}  •  Contact: ${details.contactNumber}  •  Email: ${details.email}`,
+    centerX,
+    31.5,
+    { align: "center" }
+  );
+
+  // Divider Lines
+  doc.setDrawColor(16, 45, 86);
+  doc.setLineWidth(0.8);
+  doc.line(14, 34.5, pageWidth - 14, 34.5);
+  doc.setDrawColor(255, 165, 30);
+  doc.setLineWidth(0.35);
+  doc.line(14, 35.6, pageWidth - 14, 35.6);
+
+  // Banner Box
+  const boxY = 38.5;
+  const boxHeight = 10;
+  const boxWidth = pageWidth - 28;
+  doc.setFillColor(234, 242, 255);
+  doc.setDrawColor(191, 219, 254);
+  doc.roundedRect(14, boxY, boxWidth, boxHeight, 1.5, 1.5, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.setTextColor(16, 45, 86);
+  doc.text(title.toUpperCase(), 19, boxY + 4.5);
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(6.5);
+  doc.setTextColor(113, 128, 150);
+  doc.text("Official Demographic Record & Community Profiling Registry pursuant to R.A. No. 7160", 19, boxY + 8);
+
+  const rightX = pageWidth - 19;
+  const today = new Date().toLocaleDateString("en-PH", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(23, 43, 77);
+  doc.text(`Generated: ${today}`, rightX, boxY + 4.5, { align: "right" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(36, 107, 222);
+  doc.text(`Total Records: ${totalRecords} ${recordTypeLabel}`, rightX, boxY + 8, { align: "right" });
+}
+
+function appendSignaturesAndFooters(
+  doc: jsPDF,
+  details: ReturnType<typeof resolveBarangayDetails>,
+  documentType: string
+) {
+  let finalY = (doc as any).lastAutoTable?.finalY || 160;
+  if (finalY > 155) {
+    doc.addPage();
+    finalY = 30;
+  } else {
+    finalY += 10;
+  }
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(7.5);
+  doc.setTextColor(74, 85, 104);
+  doc.text(
+    "CERTIFICATION: I hereby certify under official oath that this document is a true, faithful, and official registry record of this Barangay as officially maintained in the Barangay Information Management System.",
+    148.5,
+    finalY,
+    { align: "center", maxWidth: 260 }
+  );
+
+  finalY += 12;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(113, 128, 150);
+  doc.text("Prepared & Certified Correct by:", 35, finalY);
+  doc.text("Attested & Approved by:", 195, finalY);
+
+  finalY += 14;
+
+  doc.setDrawColor(113, 128, 150);
+  doc.setLineWidth(0.3);
+  doc.line(35, finalY, 115, finalY);
+  doc.line(195, finalY, 275, finalY);
+
+  finalY += 4.5;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(16, 45, 86);
+  doc.text(details.secretaryName.toUpperCase(), 75, finalY, { align: "center" });
+  doc.text(details.captainName.toUpperCase(), 235, finalY, { align: "center" });
+
+  finalY += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(74, 85, 104);
+  doc.text("Barangay Secretary", 75, finalY, { align: "center" });
+  doc.text("Punong Barangay / Barangay Captain", 235, finalY, { align: "center" });
+
+  finalY += 3.5;
+  doc.text(`Barangay ${details.name}`, 75, finalY, { align: "center" });
+  doc.text(`Barangay ${details.name}`, 235, finalY, { align: "center" });
+
+  // Running Footers
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const pageHeight = doc.internal.pageSize.height || 210;
+    const pageWidth = doc.internal.pageSize.width || 297;
+
+    doc.setDrawColor(229, 234, 242);
+    doc.setLineWidth(0.3);
+    doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(113, 128, 150);
+    doc.text(
+      `iBarangay Digital Management System — Official ${documentType}  •  Barangay ${details.name}, ${details.municipality}, ${details.province}`,
+      14,
+      pageHeight - 7
+    );
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 7, { align: "right" });
+  }
+}
 
 /**
- * Export the masterlist as a PDF table.
- * Uses jspdf + jspdf-autotable for clean tabular output.
+ * Export the masterlist as a PDF table with official Philippine Barangay Header.
  */
 export function exportMasterlistPdf(
   residents: ProfilingResident[],
-  barangayName: string,
-  reportTitle: string,
+  barangayNameOrConfig: string | Partial<Barangay>,
+  reportTitle = "Official Barangay Masterlist",
 ): void {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const config = typeof barangayNameOrConfig === "string" ? { name: barangayNameOrConfig } : barangayNameOrConfig;
+  const details = resolveBarangayDetails(residents as any, config);
 
-  // Header
-  doc.setFontSize(14);
-  doc.text(barangayName.toUpperCase(), 14, 15);
-  doc.setFontSize(11);
-  doc.text(reportTitle, 14, 22);
-  doc.setFontSize(8);
-  doc.text(
-    `Generated: ${new Date().toLocaleString("en-PH")}  |  Total: ${residents.length} records`,
-    14,
-    27,
-  );
+  drawProfilingOfficialHeader(doc, details, reportTitle, residents.length, "Inhabitants");
 
   const columns = [
     "#",
-    "Name",
+    "Resident ID",
+    "Full Name",
     "Sex",
     "Age",
     "Birthdate",
     "Civil Status",
     "Purok",
+    "Household #",
     "Sectors",
-    "Voter",
-    "Programs",
+    "Voter Status",
   ];
 
   const rows = residents.map((r, idx) => [
     idx + 1,
+    r.userId || r.id?.slice(0, 8),
     fullizedName(r),
-    r.sex ?? "",
-    computeAge(r.birthdate) ?? "",
+    r.sex ?? "—",
+    computeAge(r.birthdate) ?? "—",
     formatBirthdate(r.birthdate),
-    r.civilStatus ?? "",
-    r.purok ?? "",
-    (r.sectorTags ?? []).join(", "),
+    r.civilStatus ?? "—",
+    r.purok ?? "—",
+    r.householdNumber || "—",
+    (r.sectorTags ?? []).join(", ") || "None",
     r.voterStatus ?? "Unknown",
-    (r.programBeneficiaries ?? [])
-      .map((p) => p.programName)
-      .join(", "),
   ]);
 
   autoTable(doc, {
     head: [columns],
     body: rows,
-    startY: 32,
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: [37, 99, 235], fontSize: 7 },
+    startY: 51,
+    margin: { left: 14, right: 14, top: 40, bottom: 18 },
+    styles: { fontSize: 7, cellPadding: 1.8, textColor: [23, 43, 77], lineColor: [229, 234, 242], lineWidth: 0.1 },
+    headStyles: { fillColor: [16, 45, 86], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: "bold", halign: "left" },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
-      0: { cellWidth: 10 },
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: 24, fontStyle: "bold", textColor: [36, 107, 222] },
+      2: { cellWidth: 44, fontStyle: "bold" },
+      3: { cellWidth: 14, halign: "center" },
+      4: { cellWidth: 10, halign: "center" },
+      5: { cellWidth: 20, halign: "center" },
+      6: { cellWidth: 20 },
+      7: { cellWidth: 24 },
+      8: { cellWidth: 22, halign: "center" },
+      9: { cellWidth: 55 },
+      10: { cellWidth: 28, halign: "center" },
     },
   });
 
-  doc.save(`${barangayName}_${reportTitle.replace(/\s+/g, "_")}_${todayString()}.pdf`);
+  appendSignaturesAndFooters(doc, details, "Resident Masterlist");
+  doc.save(`${details.name.replace(/\s+/g, "_")}_Official_Masterlist_${todayString()}.pdf`);
 }
 
-/** Export a household list as a PDF. */
+/** Export a household list as a PDF with official Philippine Barangay Header. */
 export function exportHouseholdsPdf(
   households: Household[],
-  barangayName: string,
+  barangayNameOrConfig: string | Partial<Barangay>,
 ): void {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const config = typeof barangayNameOrConfig === "string" ? { name: barangayNameOrConfig } : barangayNameOrConfig;
+  const details = resolveBarangayDetails(null, config);
 
-  doc.setFontSize(14);
-  doc.text(barangayName.toUpperCase(), 14, 15);
-  doc.setFontSize(11);
-  doc.text("Household List", 14, 22);
-  doc.setFontSize(8);
-  doc.text(
-    `Generated: ${new Date().toLocaleString("en-PH")}  |  Total: ${households.length} households`,
-    14,
-    27,
-  );
+  drawProfilingOfficialHeader(doc, details, "Official Household Profiling Registry", households.length, "Households");
 
   const columns = [
     "Household ID",
     "Purok",
     "Address",
-    "Head",
+    "Head of Family",
     "Members",
-    "Type",
+    "Housing Type",
     "Tenure",
-    "Income",
-    "Risk",
+    "Income Bracket",
+    "Disaster Risk",
   ];
 
   const rows = households.map((h) => [
     h.id,
-    h.purokName || "",
+    h.purokName || "—",
     h.address,
     h.householdHeadName,
     h.memberCount,
     h.housingType,
     h.housingTenure,
-    h.incomeBracket || "",
-    h.disasterRiskIndicators.join(", "),
+    h.incomeBracket || "—",
+    h.disasterRiskIndicators.join(", ") || "None",
   ]);
 
   autoTable(doc, {
     head: [columns],
     body: rows,
-    startY: 32,
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: [37, 99, 235], fontSize: 7 },
+    startY: 51,
+    margin: { left: 14, right: 14, top: 40, bottom: 18 },
+    styles: { fontSize: 7, cellPadding: 1.8, textColor: [23, 43, 77], lineColor: [229, 234, 242], lineWidth: 0.1 },
+    headStyles: { fillColor: [16, 45, 86], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
   });
 
-  doc.save(`${barangayName}_Households_${todayString()}.pdf`);
+  appendSignaturesAndFooters(doc, details, "Household Registry");
+  doc.save(`${details.name.replace(/\s+/g, "_")}_Official_Households_${todayString()}.pdf`);
 }
 
 // ─── Import Template ──────────────────────────────────────────────────

@@ -47,7 +47,7 @@ type ResidentFormData = z.infer<typeof residentSchema>;
 interface AddResidentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddResident: (resident: Omit<Resident, 'id' | 'userId' | 'avatarUrl' | 'address'> & { email: string }) => Promise<void>;
+  onAddResident: (resident: Omit<Resident, 'id' | 'userId' | 'avatarUrl' | 'address' | 'barangayId'> & { email: string }) => Promise<void>;
 }
 
 export function AddResidentDialog({ isOpen, onClose, onAddResident }: AddResidentDialogProps) {
@@ -174,7 +174,7 @@ export function AddResidentDialog({ isOpen, onClose, onAddResident }: AddResiden
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                     mode="single"
-                                    captionLayout="dropdown-nav"
+                                    captionLayout="dropdown"
                                     fromYear={new Date().getFullYear() - 100}
                                     toYear={new Date().getFullYear()}
                                     selected={field.value ? new Date(field.value) : undefined}

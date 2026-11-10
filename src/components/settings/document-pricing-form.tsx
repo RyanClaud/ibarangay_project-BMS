@@ -8,7 +8,16 @@ import { Button } from "@/components/ui/button";
 import { useFirebase } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Banknote } from "lucide-react";
+import {
+  Loader2,
+  Banknote,
+  FileCheck,
+  Home,
+  HandHeart,
+  Briefcase,
+  Award,
+  Users,
+} from "lucide-react";
 import { useAppContext } from "@/contexts/app-context";
 import type { DocumentPricing } from "@/lib/types";
 
@@ -21,13 +30,16 @@ const DEFAULT_PRICING: DocumentPricing = {
   "Solo Parent Certificate": 0.00,
 };
 
-const DOCUMENT_ICONS: Record<keyof DocumentPricing, string> = {
-  'Barangay Clearance': '📋',
-  'Certificate of Residency': '🏠',
-  'Certificate of Indigency': '🤝',
-  'Business Permit': '💼',
-  'Good Moral Character Certificate': '⭐',
-  'Solo Parent Certificate': '👨‍👧',
+const DOCUMENT_ICON_CONFIG: Record<
+  keyof DocumentPricing,
+  { icon: React.ComponentType<{ className?: string }>; color: string; bg: string }
+> = {
+  'Barangay Clearance': { icon: FileCheck, color: 'text-[#246BDE]', bg: 'bg-[#EAF2FF]' },
+  'Certificate of Residency': { icon: Home, color: 'text-[#10A875]', bg: 'bg-[#ECFDF5]' },
+  'Certificate of Indigency': { icon: HandHeart, color: 'text-[#FFA51E]', bg: 'bg-[#FFF7ED]' },
+  'Business Permit': { icon: Briefcase, color: 'text-[#8B5CF6]', bg: 'bg-[#F3E8FF]' },
+  'Good Moral Character Certificate': { icon: Award, color: 'text-[#F59E0B]', bg: 'bg-[#FEF3C7]' },
+  'Solo Parent Certificate': { icon: Users, color: 'text-[#EC4899]', bg: 'bg-[#FCE7F3]' },
 };
 
 export function DocumentPricingForm() {
@@ -117,41 +129,48 @@ export function DocumentPricingForm() {
 
   if (isLoading) {
     return (
-      <Card className="border-t-4 border-t-green-500">
-        <CardContent className="flex justify-center items-center p-8">
-          <Loader2 className="animate-spin h-8 w-8 text-primary" />
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white p-8 shadow-sm flex justify-center items-center">
+        <Loader2 className="animate-spin h-8 w-8 text-[#246BDE]" />
+      </div>
     );
   }
 
   return (
-    <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-      <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-        <CardTitle className="flex items-center gap-2">
-          <Banknote className="h-6 w-6 text-green-600" />
-          Document Pricing
-        </CardTitle>
-        <CardDescription>
-          Set the fees for each document type in your barangay. These prices will be shown to residents when they request documents.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-6">
-        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>💡 Tip:</strong> Set the price to ₱0.00 for documents that should be provided free of charge.
+    <div className="rounded-2xl border border-[#E5EAF2] bg-white shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-[#E5EAF2] bg-[#F8FAFC]">
+        <h3 className="flex items-center gap-2.5 text-lg font-bold text-[#172B4D]">
+          <Banknote className="size-5 text-[#246BDE]" />
+          Document Pricing Configuration
+        </h3>
+        <p className="text-xs sm:text-sm text-[#718096] mt-1">
+          Set the official fees for each document type in your barangay. These prices will automatically apply to resident requests.
+        </p>
+      </div>
+      <div className="p-6 space-y-4">
+        <div className="bg-[#EAF2FF] border border-[#BFDBFE] rounded-xl p-3.5">
+          <p className="text-xs text-[#246BDE]">
+            <strong>💡 Tip:</strong> Set the price to ₱0.00 for documents that should be issued free of charge (e.g. Indigency).
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {(Object.keys(pricing) as Array<keyof DocumentPricing>).map((docType) => (
-            <div key={docType} className="space-y-2">
-              <Label htmlFor={docType} className="flex items-center gap-2">
-                <span className="text-lg">{DOCUMENT_ICONS[docType]}</span>
-                {docType}
-              </Label>
+          {(Object.keys(pricing) as Array<keyof DocumentPricing>).map((docType) => {
+            const iconConfig = DOCUMENT_ICON_CONFIG[docType] || {
+              icon: FileCheck,
+              color: 'text-[#246BDE]',
+              bg: 'bg-[#EAF2FF]',
+            };
+            const DocIcon = iconConfig.icon;
+            return (
+              <div key={docType} className="space-y-2 p-3.5 rounded-xl border border-[#E5EAF2] bg-[#F8FAFC]">
+                <Label htmlFor={docType} className="flex items-center gap-2 text-xs font-semibold text-[#172B4D]">
+                  <div className={`flex size-6 items-center justify-center rounded-lg ${iconConfig.bg} ${iconConfig.color} shrink-0`}>
+                    <DocIcon className="size-3.5" />
+                  </div>
+                  <span className="truncate">{docType}</span>
+                </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#718096] font-bold text-xs">
                   ₱
                 </span>
                 <Input
@@ -161,30 +180,33 @@ export function DocumentPricingForm() {
                   step="0.01"
                   value={pricing[docType]}
                   onChange={(e) => handlePriceChange(docType, e.target.value)}
-                  className="pl-8 h-11"
+                  className="pl-7 h-10 rounded-xl border-[#E2E8F0] bg-white text-sm font-semibold text-[#172B4D] focus:border-[#246BDE]"
                   placeholder="0.00"
                 />
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
-      </CardContent>
-      <CardFooter className="bg-muted/50 flex justify-between">
+      </div>
+      <div className="p-4 bg-[#F8FAFC] border-t border-[#E5EAF2] flex flex-col sm:flex-row justify-between items-center gap-3">
         <Button 
           variant="outline" 
           onClick={handleResetToDefaults}
           disabled={isSaving}
+          className="w-full sm:w-auto rounded-xl border-[#E5EAF2] text-[#172B4D] hover:bg-[#F8FAFC] text-xs font-semibold h-10 px-4"
         >
           Reset to Defaults
         </Button>
         <Button 
           onClick={handleSave} 
           disabled={isSaving || !areServicesAvailable}
+          className="w-full sm:w-auto bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl font-semibold text-xs h-10 px-5 shadow-xs"
         >
           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isSaving ? 'Saving...' : 'Save Changes'}
+          {isSaving ? 'Saving...' : 'Save Pricing Changes'}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
