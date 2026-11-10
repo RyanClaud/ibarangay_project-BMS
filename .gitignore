@@ -47,6 +47,13 @@ firestore-debug.log
 # Documentation files (exclude all .md files except README.md)
 *.md
 !README.md
+!docs/*.md
+
+# Setup scripts (local environment only)
+setup-vercel-env.ps1
+setup-vercel-env.sh
+*.ps1
+*.sh
 
 # Sensitive configuration files (keep config.ts but protect with env vars)
 .firebaserc
