@@ -175,17 +175,19 @@ export function AddIndividualDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !isSaving && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add Individual</DialogTitle>
-          <DialogDescription>
-            Add a new person to the barangay profiling masterlist.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+        <div className="px-6 pt-6 pb-4 shrink-0">
+          <DialogHeader>
+            <DialogTitle>Add Individual</DialogTitle>
+            <DialogDescription>
+              Add a new person to the barangay profiling masterlist.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 min-h-0 px-6">
           <Form {...form}>
-            <form id="add-individual-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-2">
+            <form id="add-individual-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
 
               {/* ── Personal Information ── */}
               <section className="space-y-3">
@@ -487,15 +489,17 @@ export function AddIndividualDialog({
           </Form>
         </ScrollArea>
 
-        <DialogFooter className="pt-4 border-t">
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button type="submit" form="add-individual-form" disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSaving ? "Saving…" : "Add Individual"}
-          </Button>
-        </DialogFooter>
+        <div className="px-6 py-4 border-t shrink-0">
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="add-individual-form" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSaving ? "Saving…" : "Add Individual"}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

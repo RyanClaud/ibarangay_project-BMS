@@ -150,17 +150,19 @@ export function AddHouseholdDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !isSaving && onClose()}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add Household</DialogTitle>
-          <DialogDescription>
-            Register a new household in the barangay profiling system.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-xl h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+        <div className="px-6 pt-6 pb-4 shrink-0">
+          <DialogHeader>
+            <DialogTitle>Add Household</DialogTitle>
+            <DialogDescription>
+              Register a new household in the barangay profiling system.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 min-h-0 px-6">
           <Form {...form}>
-            <form id="add-household-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-2">
+            <form id="add-household-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
 
               {/* ── Identification ── */}
               <section className="space-y-3">
@@ -335,15 +337,17 @@ export function AddHouseholdDialog({
           </Form>
         </ScrollArea>
 
-        <DialogFooter className="pt-4 border-t">
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button type="submit" form="add-household-form" disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSaving ? "Saving…" : "Add Household"}
-          </Button>
-        </DialogFooter>
+        <div className="px-6 py-4 border-t shrink-0">
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="add-household-form" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSaving ? "Saving…" : "Add Household"}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
