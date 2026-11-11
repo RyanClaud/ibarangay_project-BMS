@@ -282,8 +282,9 @@ export default function ReportsPage() {
 
     try {
       const officials = {
-        secretaryName: (users || []).find((u) => u.role === 'Secretary')?.name,
-        captainName: (users || []).find((u) => u.role === 'Barangay Captain')?.name || barangayConfig?.captainName,
+        secretaryName: barangayConfig?.secretaryName || (users || []).find((u) => u.role === 'Secretary')?.name || 'Barangay Secretary',
+        captainName: barangayConfig?.captainName || (users || []).find((u) => u.role === 'Barangay Captain')?.name || 'Punong Barangay',
+        treasurerName: barangayConfig?.treasurerName || (users || []).find((u) => u.role === 'Treasurer')?.name || 'Barangay Treasurer',
       };
       report.handler(format, data, barangayConfig, officials);
       toast({

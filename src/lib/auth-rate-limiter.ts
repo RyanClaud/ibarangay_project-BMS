@@ -341,3 +341,4 @@ export function formatDuration(totalSeconds: number): string {
   }
   return `${seconds}s`;
 }
+

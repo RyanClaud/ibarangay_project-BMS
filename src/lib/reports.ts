@@ -18,6 +18,7 @@ export interface BarangayHeaderDetails {
   email: string;
   captainName: string;
   secretaryName: string;
+  treasurerName?: string;
   sealLogoUrl?: string;
 }
 
@@ -28,17 +29,36 @@ export interface BarangayHeaderDetails {
 export function resolveBarangayDetails(
   residents?: Resident[] | null,
   config?: Partial<Barangay> | null,
-  officials?: { secretaryName?: string; captainName?: string }
+  officials?: { secretaryName?: string; captainName?: string; treasurerName?: string }
 ): BarangayHeaderDetails {
   let name = config?.name || '';
   let municipality = config?.municipality || '';
   let province = config?.province || '';
   let address = config?.address || '';
-  let contactNumber = config?.contactNumber || '';
+  let contactNumber = config?.contactNumber || config?.emergencyHotlines?.dutyDesk || '';
   let email = config?.email || '';
   let captainName = officials?.captainName || config?.captainName || '';
-  let secretaryName = officials?.secretaryName || '';
+  let secretaryName = officials?.secretaryName || config?.secretaryName || '';
+  let treasurerName = officials?.treasurerName || config?.treasurerName || '';
   let sealLogoUrl = config?.sealLogoUrl || '';
+
+  // Extract from officials council roster if top-level fields are missing
+  if (config?.officials && Array.isArray(config.officials)) {
+    if (!captainName) {
+      const cap = config.officials.find(
+        (o) => o.position?.toLowerCase().includes('captain') || o.position?.toLowerCase().includes('punong')
+      );
+      if (cap?.name) captainName = cap.name;
+    }
+    if (!secretaryName) {
+      const sec = config.officials.find((o) => o.position?.toLowerCase().includes('secretary'));
+      if (sec?.name) secretaryName = sec.name;
+    }
+    if (!treasurerName) {
+      const tr = config.officials.find((o) => o.position?.toLowerCase().includes('treasurer'));
+      if (tr?.name) treasurerName = tr.name;
+    }
+  }
 
   // Extract from first resident's data if config is missing specific fields
   if (residents && residents.length > 0) {
@@ -64,8 +84,9 @@ export function resolveBarangayDetails(
   if (!municipality) municipality = 'Bongabong';
   if (!province) province = 'Oriental Mindoro';
   if (!address) address = `${cleanName}, ${municipality}, ${province}`;
-  if (!captainName) captainName = 'Hon. Amado Magtibay';
+  if (!captainName) captainName = 'Hon. Punong Barangay';
   if (!secretaryName) secretaryName = 'Barangay Secretary';
+  if (!treasurerName) treasurerName = 'Barangay Treasurer';
 
   return {
     name: cleanName,
@@ -77,6 +98,7 @@ export function resolveBarangayDetails(
     email: email || `office@ibarangay${cleanName.toLowerCase().replace(/\s+/g, '')}.gov.ph`,
     captainName,
     secretaryName,
+    treasurerName,
     sealLogoUrl: sealLogoUrl || '/images/barangay-seal.png',
   };
 }
@@ -306,7 +328,7 @@ export const exportResidentMasterlist = async (
   formatType: 'pdf' | 'excel',
   residents: Resident[],
   config?: Partial<Barangay> | null,
-  officials?: { secretaryName?: string; captainName?: string }
+  officials?: { secretaryName?: string; captainName?: string; treasurerName?: string }
 ) => {
   const details = resolveBarangayDetails(residents, config, officials);
   const fileName = `${details.name.replace(/\s+/g, '_')}_Official_Masterlist_${format(new Date(), 'yyyy-MM-dd')}`;

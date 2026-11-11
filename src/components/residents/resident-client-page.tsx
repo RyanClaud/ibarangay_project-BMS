@@ -40,8 +40,9 @@ export function ResidentClientPage() {
     const sec = (users || []).find((u) => u.role === 'Secretary');
     const cap = (users || []).find((u) => u.role === 'Barangay Captain');
     return {
-      secretaryName: sec?.name,
-      captainName: cap?.name || barangayConfig?.captainName,
+      secretaryName: barangayConfig?.secretaryName || sec?.name || 'Barangay Secretary',
+      captainName: barangayConfig?.captainName || cap?.name || 'Punong Barangay',
+      treasurerName: barangayConfig?.treasurerName,
     };
   }, [users, barangayConfig]);
 

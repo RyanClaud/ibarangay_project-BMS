@@ -153,8 +153,8 @@ export default function CertificatePage() {
                         }
                         <div>
                             <p className="text-lg">Republic of the Philippines</p>
-                            <p className="text-lg">Bongabong, Oriental Mindoro</p>
-                            <h1 className="text-3xl font-bold">Barangay Mina De Oro</h1>
+                            <p className="text-lg">{barangayConfig?.municipality || 'Bongabong'}, {barangayConfig?.province || 'Oriental Mindoro'}</p>
+                            <h1 className="text-3xl font-bold">{barangayConfig?.name ? (barangayConfig.name.startsWith('Barangay') ? barangayConfig.name : `Barangay ${barangayConfig.name}`) : 'Barangay Mina De Oro'}</h1>
                         </div>
                         <div className="w-20"></div>
                     </div>
@@ -207,7 +207,7 @@ export default function CertificatePage() {
                     )}
 
                     <p className="indent-8">
-                        Issued this <span className="font-bold">{new Date().toLocaleDateString('en-US', { day: 'numeric' })}</span> day of <span className="font-bold">{new Date().toLocaleDateString('en-US', { month: 'long' })}</span>, <span className="font-bold">{new Date().getFullYear()}</span> at the Office of the Punong Barangay, Barangay Mina De Oro, Bongabong, Oriental Mindoro, Philippines.
+                        Issued this <span className="font-bold">{new Date().toLocaleDateString('en-US', { day: 'numeric' })}</span> day of <span className="font-bold">{new Date().toLocaleDateString('en-US', { month: 'long' })}</span>, <span className="font-bold">{new Date().getFullYear()}</span> at the Office of the Punong Barangay, {barangayConfig?.name ? (barangayConfig.name.startsWith('Barangay') ? barangayConfig.name : `Barangay ${barangayConfig.name}`) : 'Barangay Mina De Oro'}, {barangayConfig?.municipality || 'Bongabong'}, {barangayConfig?.province || 'Oriental Mindoro'}, Philippines.
                     </p>
                 </main>
 
@@ -216,7 +216,7 @@ export default function CertificatePage() {
                          <div className="h-20 mb-4">
                             {/* Signature was here */}
                         </div>
-                        <p className="font-bold uppercase border-t-2 border-black pt-2">AMADO MAGTIBAY</p>
+                        <p className="font-bold uppercase border-t-2 border-black pt-2">{barangayConfig?.captainName || 'Hon. Punong Barangay'}</p>
                         <p>Punong Barangay</p>
                     </div>
                 </footer>

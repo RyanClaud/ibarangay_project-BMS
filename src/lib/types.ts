@@ -24,6 +24,17 @@ export type EmergencyHotlines = {
   additionalNotes?: string; // Optional advisory note or radio frequency
 };
 
+export interface BarangayOfficial {
+  id: string;
+  name: string;
+  position: string; // e.g. "Punong Barangay", "Barangay Kagawad", "SK Chairperson", "Barangay Secretary", "Barangay Treasurer", "Chief Tanod"
+  committee?: string; // e.g. "Committee on Peace and Order", "Committee on Health", etc.
+  contactNumber?: string;
+  term?: string; // e.g. "2023 - 2026"
+  order?: number;
+  isActive?: boolean;
+}
+
 export type Barangay = {
   id: string;
   name: string;
@@ -35,6 +46,11 @@ export type Barangay = {
   email?: string;
   captainName?: string;
   captainContact?: string;
+  secretaryName?: string;
+  secretaryContact?: string;
+  treasurerName?: string;
+  treasurerContact?: string;
+  officials?: BarangayOfficial[];
   totalPopulation?: number;
   totalHouseholds?: number;
   totalVoters?: number;
