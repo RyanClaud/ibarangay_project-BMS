@@ -3,11 +3,11 @@
 import { useAppContext } from "@/contexts/app-context";
 import { useFirebase } from "@/firebase";
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { collection, getDocs } from "firebase/firestore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Building2, 
   Users, 
@@ -15,15 +15,22 @@ import {
   TrendingUp, 
   Activity,
   AlertCircle,
-  CheckCircle,
+  CheckCircle2,
   Clock,
-  DollarSign,
   BarChart3,
   Shield,
   Settings,
   Database,
   Globe,
-  Upload
+  Upload,
+  Search,
+  ArrowUpRight,
+  UserCog,
+  ShieldCheck,
+  ChevronRight,
+  Server,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +39,8 @@ import type { Barangay, User, Resident, DocumentRequest } from "@/lib/types";
 interface BarangayStats {
   id: string;
   name: string;
+  municipality?: string;
+  province?: string;
   totalUsers: number;
   totalResidents: number;
   totalRequests: number;
@@ -59,12 +68,11 @@ export default function SuperAdminDashboard() {
     pendingRequests: 0,
   });
 
-  // Check if user is super admin
   const isSuperAdmin = currentUser?.isSuperAdmin === true;
 
-  // Filter barangays based on search query
   const filteredBarangayStats = barangayStats.filter(stat => 
-    stat.name.toLowerCase().includes(searchQuery.toLowerCase())
+    stat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (stat.municipality && stat.municipality.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   useEffect(() => {
@@ -103,13 +111,15 @@ export default function SuperAdminDashboard() {
         return {
           id: barangay.id,
           name: barangay.name,
+          municipality: barangay.municipality,
+          province: barangay.province,
           totalUsers: barangayUsers.length,
           totalResidents: barangayResidents.length,
           totalRequests: barangayRequests.length,
           pendingRequests: barangayRequests.filter(r => r.status === 'Pending').length,
           approvedRequests: barangayRequests.filter(r => r.status === 'Approved').length,
           releasedRequests: barangayRequests.filter(r => r.status === 'Released').length,
-          isActive: barangay.isActive,
+          isActive: barangay.isActive ?? true,
         };
       });
       setBarangayStats(stats);
@@ -117,7 +127,7 @@ export default function SuperAdminDashboard() {
       // Calculate system-wide stats
       setSystemStats({
         totalBarangays: barangaysData.length,
-        activeBarangays: barangaysData.filter(b => b.isActive).length,
+        activeBarangays: barangaysData.filter(b => b.isActive !== false).length,
         totalUsers: allUsers.length,
         totalResidents: allResidents.length,
         totalRequests: allRequests.length,
@@ -133,556 +143,608 @@ export default function SuperAdminDashboard() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Access Denied</h1>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p>You don't have permission to access the Super Admin Dashboard.</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-8 text-center space-y-3">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[#EF4655]/10 text-[#EF4655] mx-auto">
+            <AlertCircle className="size-6" />
+          </div>
+          <h2 className="text-xl font-bold text-[#172B4D]">Access Restricted</h2>
+          <p className="text-sm text-[#718096] max-w-md mx-auto">
+            This module is reserved for authorized Super Administrators with multi-barangay municipal oversight privileges.
+          </p>
+          <Button onClick={() => router.push('/dashboard')} className="rounded-xl bg-[#246BDE] text-white">
+            Return to Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Super Admin Dashboard</h1>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
-            <Card key={i}>
-              <CardContent className="pt-6">
-                <div className="h-20 animate-pulse bg-muted rounded"></div>
-              </CardContent>
-            </Card>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Skeleton Header */}
+        <div className="rounded-2xl bg-slate-200 h-44 animate-pulse" />
+        {/* Skeleton KPIs */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 rounded-2xl bg-slate-100 animate-pulse border border-[#E5EAF2]" />
           ))}
         </div>
       </div>
     );
   }
 
+  const kpis = [
+    {
+      title: 'Total Barangays',
+      value: systemStats.totalBarangays.toString(),
+      subtext: `${systemStats.activeBarangays} Active LGUs`,
+      icon: Building2,
+      iconBg: 'bg-[#2474E8]',
+      trend: 'Multi-Tenant Network',
+      trendColor: 'text-[#2474E8]',
+    },
+    {
+      title: 'Platform Users',
+      value: systemStats.totalUsers.toLocaleString(),
+      subtext: 'Staff & Admin Accounts',
+      icon: Users,
+      iconBg: 'bg-[#8B5CF6]',
+      trend: 'All Roles Enrolled',
+      trendColor: 'text-[#8B5CF6]',
+    },
+    {
+      title: 'Total Residents',
+      value: systemStats.totalResidents.toLocaleString(),
+      subtext: 'Verified Profiling Records',
+      icon: ShieldCheck,
+      iconBg: 'bg-[#10A875]',
+      trend: 'Citizen Directory',
+      trendColor: 'text-[#10A875]',
+    },
+    {
+      title: 'Document Transactions',
+      value: systemStats.totalRequests.toLocaleString(),
+      subtext: `${systemStats.pendingRequests} Pending Review`,
+      icon: FileText,
+      iconBg: 'bg-[#FFA51E]',
+      trend: systemStats.pendingRequests > 0 ? `${systemStats.pendingRequests} Needs Action` : 'All Processed',
+      trendColor: systemStats.pendingRequests > 0 ? 'text-[#FFA51E]' : 'text-[#10A875]',
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            Super Admin Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            System-wide overview and management
-          </p>
-        </div>
-        <Button onClick={() => router.push('/barangays')}>
-          <Building2 className="mr-2 h-4 w-4" />
-          Manage Barangays
-        </Button>
-      </div>
-
-      {/* System-Wide Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Barangays</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{systemStats.totalBarangays}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {systemStats.activeBarangays} active
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">{systemStats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across all barangays
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-green-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Residents</CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-700 dark:text-green-400">{systemStats.totalResidents}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Registered residents
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Document Requests</CardTitle>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{systemStats.totalRequests}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {systemStats.pendingRequests} pending
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="barangays">Barangays</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="system">System</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Quick Actions */}
-            <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription>Common administrative tasks</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => router.push('/barangays/import')}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import Barangays (CSV)
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => router.push('/barangays')}
-                >
-                  <Building2 className="mr-2 h-4 w-4" />
-                  Manage Barangays
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => router.push('/residents')}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  View All Residents
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => router.push('/documents')}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  View All Requests
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => router.push('/reports')}
-                >
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Generate Reports
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* System Health */}
-            <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <CardTitle>System Health</CardTitle>
-                    <CardDescription>Current system status</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Database</span>
-                  </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    Operational
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Authentication</span>
-                  </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    Operational
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Storage</span>
-                  </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    Operational
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">Active Barangays</span>
-                  </div>
-                  <Badge variant="outline">
-                    {systemStats.activeBarangays}/{systemStats.totalBarangays}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Super Admin Executive Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C2340] via-[#123E75] to-[#1D5496] p-6 md:p-8 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-yellow-400/40 shrink-0 shadow-inner">
+            <Shield className="size-8 text-yellow-400" />
           </div>
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-semibold text-blue-200 mb-1.5 backdrop-blur-xs">
+              <Sparkles className="size-3 text-yellow-400" />
+              <span>Super Administrator Command • Region IV-B</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+              iBarangay Multi-Barangay Administration
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-100/80 mt-0.5 max-w-xl">
+              Centralized municipal platform oversight, cross-barangay demographic analytics, and institutional database administration.
+            </p>
+          </div>
+        </div>
 
-          {/* Recent Activity */}
-          <Card className="border-t-4 border-t-purple-500 hover:shadow-xl transition-all">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                  <Building2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <CardTitle>Barangay Performance</CardTitle>
-                  <CardDescription>Overview of all barangays</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {barangayStats.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Building2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No barangays found</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {barangayStats.slice(0, 5).map(stat => (
-                    <div 
-                      key={stat.id} 
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer group"
-                      onClick={() => router.push('/barangays')}
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className={`p-2 rounded-full transition-all ${stat.isActive ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                          <Building2 className={`h-5 w-5 ${stat.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold group-hover:text-primary transition-colors">{stat.name}</p>
-                            <Badge variant={stat.isActive ? "default" : "secondary"} className="text-xs">
-                              {stat.isActive ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {stat.totalResidents} residents • {stat.totalUsers} users
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{stat.totalRequests}</p>
-                          <p className="text-xs text-muted-foreground">Total</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{stat.pendingRequests}</p>
-                          <p className="text-xs text-muted-foreground">Pending</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {stat.totalRequests > 0 
-                              ? Math.round(((stat.totalRequests - stat.pendingRequests) / stat.totalRequests) * 100)
-                              : 0}%
-                          </p>
-                          <p className="text-xs text-muted-foreground">Complete</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {barangayStats.length > 5 && (
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => router.push('/barangays')}
-                    >
-                      View All {barangayStats.length} Barangays
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <div className="relative z-10 flex items-center gap-2.5 self-start md:self-auto shrink-0">
+          <Button
+            onClick={() => router.push('/barangays')}
+            className="rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white text-xs sm:text-sm font-semibold h-10 px-4 shadow-sm"
+          >
+            <Building2 className="mr-2 size-4" />
+            <span>Manage Barangays</span>
+          </Button>
+          <Button
+            onClick={() => router.push('/system-analytics')}
+            variant="outline"
+            className="rounded-xl bg-white/10 border-white/20 hover:bg-white/20 text-white text-xs sm:text-sm font-semibold h-10 px-4"
+          >
+            <BarChart3 className="mr-2 size-4 text-blue-200" />
+            <span>Analytics</span>
+          </Button>
+        </div>
+      </div>
 
-        {/* Barangays Tab */}
-        <TabsContent value="barangays" className="space-y-4">
-          <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <CardTitle>All Barangays</CardTitle>
-                    <CardDescription>Manage and monitor all barangays in the system</CardDescription>
-                  </div>
+      {/* KPI Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon;
+          return (
+            <div
+              key={kpi.title}
+              className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs transition-shadow hover:shadow-md"
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className={`flex size-13 items-center justify-center rounded-2xl text-white shadow-xs shrink-0 ${kpi.iconBg}`}
+                >
+                  <Icon className="size-6" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search barangays..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8 pr-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary w-64"
-                    />
-                    <svg
-                      className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {filteredBarangayStats.length === 0 ? (
-                <div className="text-center py-12">
-                  <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    {searchQuery ? 'No barangays found matching your search.' : 'No barangays available.'}
+                <div className="space-y-0.5 min-w-0">
+                  <p className="text-xs font-medium text-[#718096] truncate">
+                    {kpi.title}
+                  </p>
+                  <h3 className="text-2xl font-bold text-[#172B4D] tracking-tight">
+                    {kpi.value}
+                  </h3>
+                  <p className={`text-[11px] font-semibold ${kpi.trendColor}`}>
+                    {kpi.subtext}
                   </p>
                 </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredBarangayStats.map(stat => (
-                  <Card key={stat.id} className="relative overflow-hidden">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-lg">{stat.name}</CardTitle>
-                          <Badge 
-                            variant={stat.isActive ? "default" : "secondary"}
-                            className="mt-2"
-                          >
-                            {stat.isActive ? "Active" : "Inactive"}
-                          </Badge>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Main Tabs Navigation */}
+      <Tabs defaultValue="overview" className="space-y-5">
+        <TabsList className="bg-white border border-[#E5EAF2] rounded-xl p-1 grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1 shadow-xs">
+          <TabsTrigger
+            value="overview"
+            className="rounded-lg text-xs font-semibold py-2 data-[state=active]:bg-[#246BDE] data-[state=active]:text-white"
+          >
+            Overview &amp; Health
+          </TabsTrigger>
+          <TabsTrigger
+            value="barangays"
+            className="rounded-lg text-xs font-semibold py-2 data-[state=active]:bg-[#246BDE] data-[state=active]:text-white"
+          >
+            Barangay Directory
+          </TabsTrigger>
+          <TabsTrigger
+            value="analytics"
+            className="rounded-lg text-xs font-semibold py-2 data-[state=active]:bg-[#246BDE] data-[state=active]:text-white"
+          >
+            Municipal Trends
+          </TabsTrigger>
+          <TabsTrigger
+            value="system"
+            className="rounded-lg text-xs font-semibold py-2 data-[state=active]:bg-[#246BDE] data-[state=active]:text-white"
+          >
+            Platform Specs
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── TAB 1: OVERVIEW & HEALTH ── */}
+        <TabsContent value="overview" className="space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left 7 cols: Barangay Performance Roster */}
+            <div className="lg:col-span-7 xl:col-span-8 rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E5EAF2]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-[#EAF2FF] text-[#246BDE]">
+                      <Building2 className="size-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-bold text-[#172B4D] tracking-tight">
+                        Barangay Operations &amp; Adoption
+                      </h2>
+                      <p className="text-xs text-[#718096]">
+                        Operational metrics for registered LGUs
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/barangays"
+                    className="text-xs sm:text-sm font-semibold text-[#246BDE] hover:underline flex items-center gap-1"
+                  >
+                    View All LGUs →
+                  </Link>
+                </div>
+
+                <div className="divide-y divide-[#F1F5F9] pt-1">
+                  {barangayStats.length === 0 ? (
+                    <div className="text-center py-10 text-[#718096]">
+                      <Building2 className="size-10 mx-auto mb-2 text-[#CBD5E1]" />
+                      <p className="text-xs font-medium">No barangays enrolled yet.</p>
+                    </div>
+                  ) : (
+                    barangayStats.slice(0, 5).map((stat) => {
+                      const completion = stat.totalRequests > 0
+                        ? Math.round(((stat.totalRequests - stat.pendingRequests) / stat.totalRequests) * 100)
+                        : 100;
+                      return (
+                        <div
+                          key={stat.id}
+                          onClick={() => router.push('/barangays')}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 px-2 hover:bg-[#F8FAFC] rounded-xl transition-colors cursor-pointer gap-3 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex size-10 items-center justify-center rounded-xl bg-[#EAF2FF] text-[#246BDE] shrink-0 font-bold text-xs border border-[#BFDBFE]">
+                              {stat.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-bold text-[#172B4D] group-hover:text-[#246BDE] transition-colors">
+                                  {stat.name}
+                                </h4>
+                                <Badge
+                                  className={
+                                    stat.isActive
+                                      ? 'bg-[#10A875]/15 text-[#10A875] border-0 text-[10px] font-bold'
+                                      : 'bg-[#718096]/15 text-[#718096] border-0 text-[10px]'
+                                  }
+                                >
+                                  {stat.isActive ? 'Active LGU' : 'Inactive'}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-[#718096] mt-0.5">
+                                {stat.totalResidents.toLocaleString()} residents • {stat.totalUsers} staff accounts
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-5 self-end sm:self-center shrink-0">
+                            <div className="text-right">
+                              <p className="text-xs font-bold text-[#172B4D]">{stat.totalRequests} reqs</p>
+                              <p className="text-[11px] text-[#FFA51E] font-medium">{stat.pendingRequests} pending</p>
+                            </div>
+                            <div className="text-right min-w-[55px]">
+                              <p className="text-xs font-bold text-[#10A875]">{completion}%</p>
+                              <p className="text-[11px] text-[#718096]">Clear rate</p>
+                            </div>
+                            <ChevronRight className="size-4 text-[#CBD5E1] group-hover:text-[#246BDE] transition-colors" />
+                          </div>
                         </div>
-                        <Building2 className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Users</p>
-                          <p className="font-semibold">{stat.totalUsers}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Residents</p>
-                          <p className="font-semibold">{stat.totalResidents}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Requests</p>
-                          <p className="font-semibold">{stat.totalRequests}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Pending</p>
-                          <p className="font-semibold text-orange-600">{stat.pendingRequests}</p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => router.push('/barangays')}
-                      >
-                        Manage
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {barangayStats.length > 5 && (
+                <div className="pt-3 border-t border-[#E5EAF2]">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/barangays')}
+                    className="w-full rounded-xl border-[#E5EAF2] text-xs font-bold text-[#172B4D] hover:bg-[#F8FAFC] h-9"
+                  >
+                    View All {barangayStats.length} Barangays
+                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
 
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+            {/* Right 5 cols: Actions & Health */}
+            <div className="lg:col-span-5 xl:col-span-4 space-y-5">
+              {/* Quick Actions Card */}
+              <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5EAF2]">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-[#EAF2FF] text-[#246BDE]">
+                    <Activity className="size-5" />
                   </div>
                   <div>
-                    <CardTitle>Document Request Trends</CardTitle>
-                    <CardDescription>System-wide request statistics</CardDescription>
+                    <h3 className="text-base font-bold text-[#172B4D]">Platform Utilities</h3>
+                    <p className="text-xs text-[#718096]">Rapid administrative navigation</p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Total Requests</span>
-                    <span className="font-bold">{systemStats.totalRequests}</span>
+
+                <div className="grid gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/barangays/import')}
+                    className="w-full justify-start rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F0F6FF] hover:border-[#BFDBFE] hover:text-[#246BDE] h-10 transition-colors"
+                  >
+                    <Upload className="mr-2.5 size-4 text-[#246BDE]" />
+                    <span>Import Barangays via CSV</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/system-users')}
+                    className="w-full justify-start rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F0F6FF] hover:border-[#BFDBFE] hover:text-[#246BDE] h-10 transition-colors"
+                  >
+                    <Users className="mr-2.5 size-4 text-[#8B5CF6]" />
+                    <span>Manage System Users</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/system-analytics')}
+                    className="w-full justify-start rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F0F6FF] hover:border-[#BFDBFE] hover:text-[#246BDE] h-10 transition-colors"
+                  >
+                    <BarChart3 className="mr-2.5 size-4 text-[#10A875]" />
+                    <span>Platform Analytics &amp; Trends</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/system-settings')}
+                    className="w-full justify-start rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F0F6FF] hover:border-[#BFDBFE] hover:text-[#246BDE] h-10 transition-colors"
+                  >
+                    <Settings className="mr-2.5 size-4 text-[#FFA51E]" />
+                    <span>Platform System Settings</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* System Infrastructure Health Card */}
+              <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5EAF2]">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-[#ECFDF5] text-[#10A875]">
+                    <CheckCircle2 className="size-5" />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Pending</span>
-                    <span className="font-bold text-orange-600">{systemStats.pendingRequests}</span>
+                  <div>
+                    <h3 className="text-base font-bold text-[#172B4D]">Cloud Infrastructure</h3>
+                    <p className="text-xs text-[#718096]">Service availability &amp; cluster integrity</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Completion Rate</span>
-                    <span className="font-bold text-green-600">
-                      {systemStats.totalRequests > 0 
-                        ? Math.round(((systemStats.totalRequests - systemStats.pendingRequests) / systemStats.totalRequests) * 100)
-                        : 0}%
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#172B4D] flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-[#10A875] animate-ping" />
+                      Google Cloud Firestore
+                    </span>
+                    <Badge className="bg-[#10A875]/15 text-[#10A875] border-0 text-[10px] font-bold">
+                      Operational
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#172B4D] flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-[#10A875]" />
+                      Firebase Auth &amp; RBAC
+                    </span>
+                    <Badge className="bg-[#10A875]/15 text-[#10A875] border-0 text-[10px] font-bold">
+                      Operational
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#172B4D] flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-[#10A875]" />
+                      Cloud Storage &amp; Seals
+                    </span>
+                    <Badge className="bg-[#10A875]/15 text-[#10A875] border-0 text-[10px] font-bold">
+                      Operational
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#172B4D] flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-[#246BDE]" />
+                      Multi-Tenant Isolation
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-[#246BDE]">
+                      {systemStats.activeBarangays} Connected
                     </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-t-4 border-t-purple-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <CardTitle>User Distribution</CardTitle>
-                    <CardDescription>Users across all barangays</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Total Users</span>
-                    <span className="font-bold">{systemStats.totalUsers}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Total Residents</span>
-                    <span className="font-bold">{systemStats.totalResidents}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Avg per Barangay</span>
-                    <span className="font-bold">
-                      {systemStats.totalBarangays > 0 
-                        ? Math.round(systemStats.totalResidents / systemStats.totalBarangays)
-                        : 0}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
-        {/* System Tab */}
-        <TabsContent value="system" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <CardTitle>System Information</CardTitle>
-                    <CardDescription>Platform details and configuration</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Platform</span>
-                  <span className="text-sm font-medium">iBarangay v2.0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Environment</span>
-                  <Badge variant="outline">Production</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Database</span>
-                  <span className="text-sm font-medium">Firestore</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Region</span>
-                  <span className="text-sm font-medium">MIMAROPA</span>
-                </div>
-              </CardContent>
-            </Card>
+        {/* ── TAB 2: BARANGAY DIRECTORY ── */}
+        <TabsContent value="barangays" className="space-y-4">
+          <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5EAF2]">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-[#172B4D]">
+                  All Enrolled Barangays
+                </h3>
+                <p className="text-xs text-[#718096]">
+                  {filteredBarangayStats.length} barangay records in the municipal network
+                </p>
+              </div>
 
-            <Card className="border-t-4 border-t-orange-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent dark:from-orange-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                    <Database className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#718096]" />
+                <Input
+                  placeholder="Search barangay name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder-[#718096] focus:bg-white focus:border-[#246BDE]"
+                />
+              </div>
+            </div>
+
+            {filteredBarangayStats.length === 0 ? (
+              <div className="text-center py-14 space-y-3">
+                <Building2 className="size-12 mx-auto text-[#CBD5E1]" />
+                <p className="text-sm font-medium text-[#718096]">
+                  {searchQuery ? `No barangays match "${searchQuery}"` : 'No barangays configured yet.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredBarangayStats.map((stat) => (
+                  <div
+                    key={stat.id}
+                    className="rounded-xl border border-[#E5EAF2] bg-[#F8FAFC]/60 p-4 space-y-3.5 hover:bg-white hover:border-[#BFDBFE] transition-all shadow-2xs group"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-base font-bold text-[#172B4D] group-hover:text-[#246BDE] transition-colors">
+                          {stat.name}
+                        </h4>
+                        <p className="text-xs text-[#718096]">
+                          {stat.municipality || 'Bongabong'}, {stat.province || 'Oriental Mindoro'}
+                        </p>
+                      </div>
+                      <Badge
+                        className={
+                          stat.isActive
+                            ? 'bg-[#10A875]/15 text-[#10A875] border-0 text-[10px] font-bold'
+                            : 'bg-[#718096]/15 text-[#718096] border-0 text-[10px]'
+                        }
+                      >
+                        {stat.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-white border border-[#E5EAF2] text-xs">
+                      <div>
+                        <p className="text-[11px] text-[#718096]">Residents</p>
+                        <p className="font-bold text-[#172B4D]">{stat.totalResidents.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-[#718096]">Staff Accounts</p>
+                        <p className="font-bold text-[#172B4D]">{stat.totalUsers}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-[#718096]">Total Reqs</p>
+                        <p className="font-bold text-[#172B4D]">{stat.totalRequests}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-[#718096]">Pending</p>
+                        <p className="font-bold text-[#FFA51E]">{stat.pendingRequests}</p>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push('/barangays')}
+                      className="w-full rounded-xl border-[#E5EAF2] text-xs font-bold text-[#172B4D] hover:bg-[#F0F6FF] hover:text-[#246BDE] h-9 gap-1.5"
+                    >
+                      <span>Manage LGU Profile</span>
+                      <ArrowUpRight className="size-3.5" />
+                    </Button>
                   </div>
-                  <div>
-                    <CardTitle>Administrative Tools</CardTitle>
-                    <CardDescription>System management utilities</CardDescription>
-                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ── TAB 3: MUNICIPAL TRENDS ── */}
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5EAF2]">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-[#EAF2FF] text-[#246BDE]">
+                  <FileText className="size-5" />
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <Database className="mr-2 h-4 w-4" />
-                  Database Backup
+                <div>
+                  <h3 className="text-base font-bold text-[#172B4D]">Transaction Summary</h3>
+                  <p className="text-xs text-[#718096]">Multi-barangay clearance workload</p>
+                </div>
+              </div>
+              <div className="space-y-3 pt-1">
+                <div className="flex justify-between items-center text-sm py-2 border-b border-[#F1F5F9]">
+                  <span className="text-[#718096]">Total Recorded Requests</span>
+                  <span className="font-bold text-[#172B4D]">{systemStats.totalRequests.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm py-2 border-b border-[#F1F5F9]">
+                  <span className="text-[#FFA51E] font-medium">Pending Processing</span>
+                  <span className="font-bold text-[#FFA51E]">{systemStats.pendingRequests.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm py-2">
+                  <span className="text-[#10A875] font-medium">Municipal Clearance Rate</span>
+                  <span className="font-bold text-[#10A875]">
+                    {systemStats.totalRequests > 0
+                      ? Math.round(((systemStats.totalRequests - systemStats.pendingRequests) / systemStats.totalRequests) * 100)
+                      : 100}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5EAF2]">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-[#F3E8FF] text-[#8B5CF6]">
+                  <Users className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#172B4D]">Demographic Enrollment</h3>
+                  <p className="text-xs text-[#718096]">Inhabitant profiling distribution</p>
+                </div>
+              </div>
+              <div className="space-y-3 pt-1">
+                <div className="flex justify-between items-center text-sm py-2 border-b border-[#F1F5F9]">
+                  <span className="text-[#718096]">Total Enrolled Residents</span>
+                  <span className="font-bold text-[#172B4D]">{systemStats.totalResidents.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm py-2 border-b border-[#F1F5F9]">
+                  <span className="text-[#718096]">Total Staff Users</span>
+                  <span className="font-bold text-[#172B4D]">{systemStats.totalUsers.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm py-2">
+                  <span className="text-[#718096]">Average Inhabitants per Barangay</span>
+                  <span className="font-bold text-[#246BDE]">
+                    {systemStats.totalBarangays > 0
+                      ? Math.round(systemStats.totalResidents / systemStats.totalBarangays).toLocaleString()
+                      : 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── TAB 4: PLATFORM SPECS ── */}
+        <TabsContent value="system" className="space-y-4">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5EAF2]">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-[#EAF2FF] text-[#246BDE]">
+                  <Server className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#172B4D]">System Architecture</h3>
+                  <p className="text-xs text-[#718096]">Runtime stack and environmental specs</p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 text-xs">
+                <div className="flex justify-between py-2 border-b border-[#F1F5F9]">
+                  <span className="text-[#718096]">Framework</span>
+                  <span className="font-semibold text-[#172B4D]">Next.js 15 (App Router, Turbopack)</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#F1F5F9]">
+                  <span className="text-[#718096]">Database Layer</span>
+                  <span className="font-semibold text-[#172B4D]">Google Cloud Firestore (Multi-tenant)</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#F1F5F9]">
+                  <span className="text-[#718096]">Auth &amp; RBAC</span>
+                  <span className="font-semibold text-[#172B4D]">Firebase Auth with Sliding Rate Limiter</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-[#718096]">Regulatory Compliance</span>
+                  <Badge className="bg-[#10A875]/15 text-[#10A875] border-0 text-[10px] font-bold">
+                    R.A. 10173 &amp; R.A. 7160
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5EAF2]">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-[#FFF7ED] text-[#EA580C]">
+                  <Database className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#172B4D]">Administration Tools</h3>
+                  <p className="text-xs text-[#718096]">Deep system management shortcuts</p>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/system-reports')}
+                  className="w-full justify-start rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F8FAFC] h-10"
+                >
+                  <FileText className="mr-2.5 size-4 text-[#246BDE]" />
+                  <span>Generate Municipal Executive Reports</span>
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Settings className="mr-2 h-4 w-4" />
-                  System Settings
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/system-settings')}
+                  className="w-full justify-start rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D] hover:bg-[#F8FAFC] h-10"
+                >
+                  <Settings className="mr-2.5 size-4 text-[#8B5CF6]" />
+                  <span>Inspect Database &amp; System Configuration</span>
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Globe className="mr-2 h-4 w-4" />
-                  API Configuration
-                </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

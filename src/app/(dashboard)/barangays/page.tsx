@@ -4,22 +4,44 @@ import { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/app-context";
 import { useFirebase } from "@/firebase";
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc } from "firebase/firestore";
-import { getAuth, createUserWithEmailAndPassword, initializeAuth, browserLocalPersistence } from "firebase/auth";
+import { createUserWithEmailAndPassword, initializeAuth, browserLocalPersistence } from "firebase/auth";
 import { initializeApp, deleteApp } from "firebase/app";
 import { firebaseConfig } from "@/firebase/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Building2, Mail, AlertCircle, Upload, UserPlus, MapPin } from "lucide-react";
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Building2, 
+  Mail, 
+  AlertCircle, 
+  Upload, 
+  UserPlus, 
+  MapPin, 
+  CheckCircle2, 
+  ShieldCheck, 
+  Search, 
+  Phone, 
+  Calendar, 
+  Sparkles,
+  ExternalLink,
+  Settings,
+  Shield,
+  Layers,
+  FileSpreadsheet
+} from "lucide-react";
+import Link from "next/link";
 import type { Barangay } from "@/lib/types";
-import { generateBarangayId, validateBarangay, formatBarangayName } from "@/lib/barangay-utils";
+import { validateBarangay } from "@/lib/barangay-utils";
 
 export default function BarangaysPage() {
   const { currentUser } = useAppContext();
@@ -60,14 +82,15 @@ export default function BarangaysPage() {
   const isSuperAdmin = currentUser?.isSuperAdmin === true;
 
   // Get unique municipalities
-  const municipalities = Array.from(new Set(barangays.map(b => b.municipality))).sort();
+  const municipalities = Array.from(new Set(barangays.map(b => b.municipality).filter(Boolean))).sort();
   
   // Filter barangays based on search query and selected municipality
   const filteredBarangays = barangays.filter(barangay => {
-    const matchesSearch = barangay.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      barangay.municipality.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      barangay.province.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      barangay.address.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = 
+      barangay.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (barangay.municipality && barangay.municipality.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (barangay.province && barangay.province.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (barangay.address && barangay.address.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesMunicipality = selectedMunicipality === 'all' || barangay.municipality === selectedMunicipality;
     
@@ -93,7 +116,6 @@ export default function BarangaysPage() {
       
       usersSnapshot.docs.forEach(doc => {
         const userData = doc.data();
-        // Find admins (not super admins) for each barangay
         if (userData.role === "Admin" && !userData.isSuperAdmin && userData.barangayId) {
           adminsMap[userData.barangayId] = {
             email: userData.email || "N/A",
@@ -102,7 +124,6 @@ export default function BarangaysPage() {
         }
       });
       
-      console.log('Loaded admins:', adminsMap); // Debug log
       setBarangayAdmins(adminsMap);
     } catch (error) {
       console.error("Error loading barangays:", error);
@@ -130,7 +151,6 @@ export default function BarangaysPage() {
       return;
     }
 
-    // Validate admin account fields if creating admin
     if (!editingBarangay && formData.createAdminAccount) {
       if (!formData.adminEmail || !formData.adminName || !formData.adminPassword) {
         toast({
@@ -144,7 +164,6 @@ export default function BarangaysPage() {
 
     try {
       if (editingBarangay) {
-        // Update existing barangay
         const barangayRef = doc(firestore, "barangays", editingBarangay.id);
         await updateDoc(barangayRef, {
           name: formData.name,
@@ -156,17 +175,15 @@ export default function BarangaysPage() {
           isActive: editingBarangay.isActive,
         });
 
-        // Check if admin email changed
         const currentAdmin = barangayAdmins[editingBarangay.id];
         if (currentAdmin && formData.adminEmail && formData.adminEmail !== currentAdmin.email) {
           toast({
             title: "Important Notice",
-            description: "Email changes only update the display. To change login email, you must update it in Firebase Console → Authentication → Users, or delete and recreate the admin account.",
+            description: "Email changes only update the display. To change login email, update in Firebase Console or recreate the admin.",
             variant: "destructive",
           });
           
           try {
-            // Find and update the admin user document (for display purposes only)
             const usersSnapshot = await getDocs(collection(firestore, "users"));
             const adminDoc = usersSnapshot.docs.find(doc => {
               const data = doc.data();
@@ -190,7 +207,6 @@ export default function BarangaysPage() {
           description: "Barangay information updated successfully",
         });
       } else {
-        // Create new barangay
         const newBarangay: Omit<Barangay, "id"> = {
           name: formData.name,
           address: formData.address,
@@ -203,23 +219,19 @@ export default function BarangaysPage() {
         };
         const barangayDoc = await addDoc(collection(firestore, "barangays"), newBarangay);
         
-        // Create admin account if requested
         if (formData.createAdminAccount) {
           try {
-            // Create a secondary Firebase app instance to avoid signing out the super admin
             const secondaryApp = initializeApp(firebaseConfig, `secondary-${Date.now()}`);
             const secondaryAuth = initializeAuth(secondaryApp, {
               persistence: browserLocalPersistence
             });
             
-            // Create new admin user in the secondary app (won't affect current session)
             const userCredential = await createUserWithEmailAndPassword(
               secondaryAuth,
               formData.adminEmail,
               formData.adminPassword
             );
 
-            // Create user document in Firestore
             await setDoc(doc(firestore, "users", userCredential.user.uid), {
               id: userCredential.user.uid,
               name: formData.adminName,
@@ -230,10 +242,8 @@ export default function BarangaysPage() {
               isSuperAdmin: false,
             });
 
-            // Delete the secondary app to clean up
             await deleteApp(secondaryApp);
 
-            // Show credentials to super admin
             setCreatedAdminCredentials({
               email: formData.adminEmail,
               password: formData.adminPassword,
@@ -275,8 +285,6 @@ export default function BarangaysPage() {
 
   const handleEdit = (barangay: Barangay) => {
     setEditingBarangay(barangay);
-    
-    // Get the admin email for this barangay
     const admin = barangayAdmins[barangay.id];
     
     setFormData({
@@ -294,15 +302,15 @@ export default function BarangaysPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (barangayId: string) => {
+  const handleDelete = async (barangayId: string, name: string) => {
     if (!firestore) return;
-    if (!confirm("Are you sure you want to delete this barangay? This action cannot be undone.")) return;
+    if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) return;
 
     try {
       await deleteDoc(doc(firestore, "barangays", barangayId));
       toast({
         title: "Success",
-        description: "Barangay deleted successfully",
+        description: `Barangay "${name}" deleted successfully`,
       });
       loadBarangays();
     } catch (error) {
@@ -336,26 +344,21 @@ export default function BarangaysPage() {
     }
   };
 
-  // Generate email from barangay name
   const generateAdminEmail = (barangayName: string) => {
     if (!barangayName) return "";
-    
-    // Remove special characters, convert to lowercase, remove spaces
     const cleanName = barangayName
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '') // Remove special chars
-      .replace(/\s+/g, '') // Remove spaces
-      .replace(/^barangay/i, ''); // Remove "barangay" prefix if exists
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '')
+      .replace(/^barangay/i, '');
     
     return `admin@ibarangay${cleanName}.com`;
   };
 
-  // Handle barangay name change and auto-generate email
   const handleNameChange = (name: string) => {
     setFormData({ 
       ...formData, 
       name,
-      // Only auto-generate email when creating new barangay
       adminEmail: editingBarangay ? formData.adminEmail : generateAdminEmail(name)
     });
   };
@@ -365,20 +368,17 @@ export default function BarangaysPage() {
     if (!firestore || !selectedBarangayForAdmin) return;
 
     try {
-      // Create a secondary Firebase app instance
       const secondaryApp = initializeApp(firebaseConfig, `secondary-${Date.now()}`);
       const secondaryAuth = initializeAuth(secondaryApp, {
         persistence: browserLocalPersistence
       });
       
-      // Create admin user
       const userCredential = await createUserWithEmailAndPassword(
         secondaryAuth,
         adminFormData.email,
         adminFormData.password
       );
 
-      // Create user document
       await setDoc(doc(firestore, "users", userCredential.user.uid), {
         id: userCredential.user.uid,
         name: adminFormData.name,
@@ -389,7 +389,6 @@ export default function BarangaysPage() {
         isSuperAdmin: false,
       });
 
-      // Clean up secondary app
       await deleteApp(secondaryApp);
 
       toast({
@@ -400,7 +399,7 @@ export default function BarangaysPage() {
       setCreateAdminDialogOpen(false);
       setAdminFormData({ name: "", email: "", password: "" });
       setSelectedBarangayForAdmin(null);
-      loadBarangays(); // Refresh the list
+      loadBarangays();
     } catch (error: any) {
       console.error("Error creating admin:", error);
       toast({
@@ -439,260 +438,538 @@ export default function BarangaysPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Barangay Management</h1>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">You don't have permission to access this page. Only super administrators can manage barangays.</p>
-          </CardContent>
-        </Card>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-8 text-center space-y-3">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[#EF4655]/10 text-[#EF4655] mx-auto">
+            <AlertCircle className="size-6" />
+          </div>
+          <h2 className="text-xl font-bold text-[#172B4D]">Access Restricted</h2>
+          <p className="text-sm text-[#718096] max-w-md mx-auto">
+            You don't have permission to access Barangay Management. Only Super Administrators can configure barangay tenants.
+          </p>
+        </div>
       </div>
     );
   }
 
+  const activeCount = barangays.filter(b => b.isActive !== false).length;
+  const configuredAdminCount = Object.keys(barangayAdmins).length;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Barangay Management</h1>
-          <p className="text-muted-foreground">Manage multiple barangays in the system</p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Executive Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C2340] via-[#123E75] to-[#1D5496] p-6 md:p-8 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-yellow-400/40 shrink-0 shadow-inner">
+            <Building2 className="size-8 text-yellow-400" />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-semibold text-blue-200 mb-1.5 backdrop-blur-xs">
+              <Sparkles className="size-3 text-yellow-400" />
+              <span>Multi-Tenant Network • Oriental Mindoro</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+              Barangay Jurisdiction Management
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-100/80 mt-0.5 max-w-xl">
+              Register, configure, and monitor multi-barangay municipal tenants, designated administrators, and institutional seals.
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => window.location.href = '/barangays/bulk-create'}
-          >
-            <Building2 className="mr-2 h-4 w-4" />
-            Bulk Create
-          </Button>
+
+        <div className="relative z-10 flex flex-wrap items-center gap-2.5 shrink-0">
+          <Link href="/barangays/bulk-create">
+            <Button
+              variant="outline"
+              className="rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-xs font-semibold h-10 px-4 text-xs sm:text-sm"
+            >
+              <Layers className="mr-2 h-4 w-4" />
+              Bulk Create
+            </Button>
+          </Link>
+          <Link href="/barangays/import">
+            <Button
+              variant="outline"
+              className="rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-xs font-semibold h-10 px-4 text-xs sm:text-sm"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Import CSV
+            </Button>
+          </Link>
+          
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold h-10 px-4 shadow-sm text-xs sm:text-sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Barangay
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle>{editingBarangay ? "Edit Barangay" : "Add New Barangay"}</DialogTitle>
-              <DialogDescription>
-                {editingBarangay ? "Update barangay information" : "Create a new barangay in the system"}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="space-y-4 overflow-y-auto flex-1 pr-2 pb-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Barangay Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name || ""}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="e.g., Mina De Oro"
-                    required
-                  />
-                  {!editingBarangay && formData.name && (
-                    <p className="text-xs text-muted-foreground">
-                      Email will be: {generateAdminEmail(formData.name)}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="municipality">Municipality *</Label>
-                  <Input
-                    id="municipality"
-                    value={formData.municipality || ""}
-                    onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
-                    placeholder="e.g., Bongabong"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="province">Province *</Label>
-                  <Input
-                    id="province"
-                    value={formData.province || ""}
-                    onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                    placeholder="e.g., Oriental Mindoro"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contactNumber">Contact Number</Label>
-                  <Input
-                    id="contactNumber"
-                    value={formData.contactNumber || ""}
-                    onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                    placeholder="e.g., +63 123 456 7890"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Complete Address *</Label>
-                <Input
-                  id="address"
-                  value={formData.address || ""}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Full address"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="sealLogoUrl">Seal/Logo URL</Label>
-                  <Input
-                    id="sealLogoUrl"
-                    value={formData.sealLogoUrl || ""}
-                    onChange={(e) => setFormData({ ...formData, sealLogoUrl: e.target.value })}
-                    placeholder="https://example.com/seal.png"
-                    type="url"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="barangayAdminEmail">
-                    Barangay Admin Email
-                    {!editingBarangay && <span className="text-xs text-green-600 ml-1">(Auto-generated)</span>}
-                    {editingBarangay && <span className="text-xs text-amber-600 ml-1">(Display Only)</span>}
-                  </Label>
-                  <Input
-                    id="barangayAdminEmail"
-                    type="email"
-                    value={formData.adminEmail || ""}
-                    onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
-                    placeholder={editingBarangay ? "Current admin email" : "Will be auto-generated from barangay name"}
-                  />
-                  {!editingBarangay ? (
-                    <p className="text-xs text-muted-foreground">
-                      Auto-generated based on barangay name. You can edit if needed.
-                    </p>
-                  ) : (
-                    <div className="space-y-1">
-                      <p className="text-xs text-amber-600">
-                        ⚠️ This only updates the display email, not the login email.
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        To change login email: Go to Firebase Console → Authentication → Users → Edit user email, OR delete and recreate the admin account.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {!editingBarangay && (
-                <>
-                  <div className="border-t pt-4 space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="createAdminAccount"
-                        checked={formData.createAdminAccount}
-                        onCheckedChange={(checked) => 
-                          setFormData({ ...formData, createAdminAccount: checked as boolean })
-                        }
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border-[#E5EAF2]">
+              <DialogHeader className="flex-shrink-0 border-b border-[#E5EAF2] pb-4">
+                <DialogTitle className="text-lg font-bold text-[#102D56]">
+                  {editingBarangay ? "Edit Barangay Jurisdiction" : "Add New Barangay Jurisdiction"}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#718096]">
+                  {editingBarangay ? "Update official jurisdiction profile, address, and contact details." : "Register a new barangay unit to activate its municipal tenant workspace."}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <div className="space-y-4 overflow-y-auto flex-1 pr-1 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="name" className="text-xs font-bold text-[#172B4D]">Barangay Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name || ""}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        placeholder="e.g., Mina De Oro"
+                        required
+                        className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
                       />
-                      <Label htmlFor="createAdminAccount" className="cursor-pointer">
-                        Create Barangay Admin Account
-                      </Label>
+                      {!editingBarangay && formData.name && (
+                        <p className="text-[11px] text-[#246BDE]">
+                          Suggested Admin Email: {generateAdminEmail(formData.name)}
+                        </p>
+                      )}
                     </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="municipality" className="text-xs font-bold text-[#172B4D]">Municipality *</Label>
+                      <Input
+                        id="municipality"
+                        value={formData.municipality || ""}
+                        onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
+                        placeholder="e.g., Bongabong"
+                        required
+                        className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
+                      />
+                    </div>
+                  </div>
 
-                    {formData.createAdminAccount && (
-                      <div className="space-y-4 pl-6 border-l-2 border-primary/20">
-                        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <p>An admin account will be created using the email above. Save the credentials to share with the admin.</p>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="adminName">Admin Name *</Label>
-                          <Input
-                            id="adminName"
-                            value={formData.adminName || ""}
-                            onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
-                            placeholder="e.g., Juan Dela Cruz"
-                            required={formData.createAdminAccount}
-                          />
-                        </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="province" className="text-xs font-bold text-[#172B4D]">Province *</Label>
+                      <Input
+                        id="province"
+                        value={formData.province || ""}
+                        onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                        placeholder="e.g., Oriental Mindoro"
+                        required
+                        className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="contactNumber" className="text-xs font-bold text-[#172B4D]">Official Hotline</Label>
+                      <Input
+                        id="contactNumber"
+                        value={formData.contactNumber || ""}
+                        onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                        placeholder="e.g., +63 912 345 6789"
+                        className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
+                      />
+                    </div>
+                  </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="adminPassword">Admin Password *</Label>
-                          <Input
-                            id="adminPassword"
-                            type="password"
-                            value={formData.adminPassword || ""}
-                            onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                            placeholder="Minimum 6 characters"
-                            required={formData.createAdminAccount}
-                            minLength={6}
-                          />
-                        </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="address" className="text-xs font-bold text-[#172B4D]">Barangay Hall Complete Address *</Label>
+                    <Input
+                      id="address"
+                      value={formData.address || ""}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="e.g., Barangay Hall, Purok 1, Bongabong, Oriental Mindoro"
+                      required
+                      className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
+                    />
+                  </div>
 
-                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
-                            <strong>Email:</strong> {formData.adminEmail || "Please enter email above"}
-                          </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sealLogoUrl" className="text-xs font-bold text-[#172B4D]">Seal/Logo URL</Label>
+                      <Input
+                        id="sealLogoUrl"
+                        value={formData.sealLogoUrl || ""}
+                        onChange={(e) => setFormData({ ...formData, sealLogoUrl: e.target.value })}
+                        placeholder="https://.../seal.png"
+                        type="url"
+                        className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="barangayAdminEmail" className="text-xs font-bold text-[#172B4D]">
+                        Barangay Admin Email
+                        {!editingBarangay && <span className="text-[11px] text-[#10A875] ml-1">(Auto-suggested)</span>}
+                        {editingBarangay && <span className="text-[11px] text-[#FFA51E] ml-1">(Display Only)</span>}
+                      </Label>
+                      <Input
+                        id="barangayAdminEmail"
+                        type="email"
+                        value={formData.adminEmail || ""}
+                        onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                        placeholder={editingBarangay ? "Current admin email" : "Auto-generated from name"}
+                        className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
+                      />
+                    </div>
+                  </div>
+
+                  {!editingBarangay && (
+                    <div className="rounded-xl border border-[#E5EAF2] bg-[#F8FAFC] p-4 space-y-3">
+                      <div className="flex items-center space-x-2.5">
+                        <Checkbox
+                          id="createAdminAccount"
+                          checked={formData.createAdminAccount}
+                          onCheckedChange={(checked) => 
+                            setFormData({ ...formData, createAdminAccount: checked as boolean })
+                          }
+                          className="border-[#CBD5E1] data-[state=checked]:bg-[#246BDE]"
+                        />
+                        <Label htmlFor="createAdminAccount" className="cursor-pointer text-xs font-bold text-[#172B4D]">
+                          Automatically Provision Barangay Administrator Account
+                        </Label>
+                      </div>
+
+                      {formData.createAdminAccount && (
+                        <div className="space-y-3 pl-6 pt-2 border-l-2 border-[#246BDE]">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="adminName" className="text-xs font-semibold text-[#172B4D]">Admin Full Name *</Label>
+                            <Input
+                              id="adminName"
+                              value={formData.adminName || ""}
+                              onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
+                              placeholder="e.g., Juan Dela Cruz"
+                              required={formData.createAdminAccount}
+                              className="rounded-xl bg-white border-[#E2E8F0] text-sm"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="adminPassword" className="text-xs font-semibold text-[#172B4D]">Admin Password *</Label>
+                            <Input
+                              id="adminPassword"
+                              type="password"
+                              value={formData.adminPassword || ""}
+                              onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                              placeholder="Minimum 6 characters"
+                              required={formData.createAdminAccount}
+                              minLength={6}
+                              className="rounded-xl bg-white border-[#E2E8F0] text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-[#E5EAF2] flex-shrink-0 bg-white">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-xl">
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold">
+                    {editingBarangay ? "Update Jurisdiction" : "Create Jurisdiction"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* KPI Metric Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Registered LGUs</span>
+            <div className="size-10 rounded-xl bg-[#2474E8] flex items-center justify-center text-white shadow-xs">
+              <Building2 className="size-5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{barangays.length}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">Multi-Tenant Units</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Active Status</span>
+            <div className="size-10 rounded-xl bg-[#10A875] flex items-center justify-center text-white shadow-xs">
+              <CheckCircle2 className="size-5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{activeCount}</div>
+            <p className="text-xs font-medium text-[#10A875] mt-1">Operational Jurisdictions</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Assigned Admins</span>
+            <div className="size-10 rounded-xl bg-[#8B5CF6] flex items-center justify-center text-white shadow-xs">
+              <ShieldCheck className="size-5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{configuredAdminCount}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">Lead Officers Enrolled</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Municipalities</span>
+            <div className="size-10 rounded-xl bg-[#FFA51E] flex items-center justify-center text-white shadow-xs">
+              <MapPin className="size-5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{municipalities.length}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">Geographic Clusters</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white p-4 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#718096]" />
+          <Input
+            placeholder="Search barangay, municipality, province..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder-[#718096]"
+          />
+        </div>
+
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <Select value={selectedMunicipality} onValueChange={setSelectedMunicipality}>
+            <SelectTrigger className="h-10 w-full sm:w-52 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-xs font-semibold text-[#172B4D]">
+              <SelectValue placeholder="All Municipalities" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[#E5EAF2]">
+              <SelectItem value="all">All Municipalities ({barangays.length})</SelectItem>
+              {municipalities.map(m => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchQuery('')}
+              className="h-10 rounded-xl text-xs text-[#718096] hover:text-[#102D56]"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Barangays Directory Table */}
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white overflow-hidden shadow-xs">
+        <div className="p-5 border-b border-[#E5EAF2] flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-[#102D56]">Barangay Roster</h2>
+            <p className="text-xs text-[#718096] mt-0.5">
+              Showing {filteredBarangays.length} of {barangays.length} registered jurisdictions
+            </p>
+          </div>
+          <Badge variant="outline" className="rounded-full border-[#E5EAF2] text-[#246BDE] font-semibold text-xs px-3 py-1">
+            {filteredBarangays.length} Loaded
+          </Badge>
+        </div>
+
+        {isLoading ? (
+          <div className="py-16 text-center text-sm text-[#718096]">
+            <Building2 className="size-8 mx-auto mb-2 text-[#CBD5E1] animate-pulse" />
+            Loading registered barangay jurisdictions...
+          </div>
+        ) : filteredBarangays.length === 0 ? (
+          <div className="py-16 text-center text-sm text-[#718096] space-y-2">
+            <Building2 className="size-10 mx-auto text-[#CBD5E1]" />
+            <p className="font-semibold text-[#172B4D]">No barangays found</p>
+            <p className="text-xs text-[#718096]">Try adjusting your search query or municipality filter.</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#F8FAFC] border-b border-[#E5EAF2] hover:bg-[#F8FAFC]">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5 pl-6">Barangay & LGU</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5">Address & Hotline</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5">Designated Admin</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5">Created</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5">Status</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5 pr-6 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredBarangays.map((barangay) => {
+                const admin = barangayAdmins[barangay.id];
+                const createdDate = barangay.createdAt 
+                  ? new Date(barangay.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                  : "—";
+                
+                return (
+                  <TableRow key={barangay.id} className="hover:bg-[#F8FAFC]/80 transition-colors border-b border-[#F0F4FA]">
+                    <TableCell className="py-3.5 pl-6">
+                      <div className="flex items-center gap-3">
+                        <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${barangay.isActive ? 'bg-[#246BDE]/10 text-[#246BDE]' : 'bg-slate-100 text-slate-400'}`}>
+                          {barangay.sealLogoUrl ? (
+                            <img src={barangay.sealLogoUrl} alt={barangay.name} className="size-7 rounded-full object-cover" />
+                          ) : (
+                            <Building2 className="size-5" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-[#102D56]">{barangay.name}</div>
+                          <div className="text-xs text-[#718096] flex items-center gap-1 mt-0.5">
+                            <MapPin className="size-3 text-[#246BDE]" />
+                            <span>{barangay.municipality}, {barangay.province}</span>
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                </>
-              )}
-              </div>
+                    </TableCell>
 
-              <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0 bg-background">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingBarangay ? "Update" : "Create"} Barangay
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-        </div>
+                    <TableCell className="py-3.5">
+                      <div className="text-xs">
+                        <div className="font-medium text-[#172B4D] max-w-xs truncate">{barangay.address}</div>
+                        {barangay.contactNumber && (
+                          <div className="text-[#718096] flex items-center gap-1 mt-1">
+                            <Phone className="size-3" />
+                            {barangay.contactNumber}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="py-3.5">
+                      <div className="text-xs">
+                        {admin ? (
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-[#172B4D]">{admin.name}</div>
+                            <div className="text-[#718096] flex items-center gap-1">
+                              <Mail className="size-3 text-[#246BDE]" />
+                              {admin.email}
+                            </div>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openCreateAdminDialog(barangay)}
+                            className="h-7 text-xs rounded-lg border-[#E5EAF2] text-[#246BDE] hover:bg-[#246BDE]/10"
+                          >
+                            <UserPlus className="size-3 mr-1" />
+                            Provision Admin
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="py-3.5 text-xs text-[#718096]">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="size-3 text-[#718096]" />
+                        {createdDate}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="py-3.5">
+                      <Badge
+                        onClick={() => toggleActive(barangay)}
+                        className={`cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all ${
+                          barangay.isActive 
+                            ? "bg-[#10A875]/15 text-[#10A875] hover:bg-[#10A875]/25 border-transparent" 
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200 border-transparent"
+                        }`}
+                      >
+                        {barangay.isActive ? "● Active" : "○ Inactive"}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="py-3.5 pr-6 text-right">
+                      <div className="flex justify-end items-center gap-1">
+                        <Link href={`/barangays/${barangay.id}/settings`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 rounded-lg text-[#718096] hover:text-[#246BDE] hover:bg-[#F0F4FA]"
+                            title="Manage Roster & Settings"
+                          >
+                            <Settings className="size-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(barangay)}
+                          className="size-8 rounded-lg text-[#718096] hover:text-[#246BDE] hover:bg-[#F0F4FA]"
+                          title="Edit barangay details"
+                        >
+                          <Edit className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(barangay.id, barangay.name)}
+                          className="size-8 rounded-lg text-[#718096] hover:text-[#EF4655] hover:bg-[#FEF2F2]"
+                          title="Delete barangay"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Admin Credentials Dialog */}
       <Dialog open={!!createdAdminCredentials} onOpenChange={(open) => {
         if (!open) setCreatedAdminCredentials(null);
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl border-[#E5EAF2]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-green-600" />
-              Admin Account Created
+            <DialogTitle className="flex items-center gap-2 text-[#102D56]">
+              <ShieldCheck className="size-5 text-[#10A875]" />
+              Admin Account Provisioned
             </DialogTitle>
-            <DialogDescription>
-              Save these credentials and share them with the barangay admin
+            <DialogDescription className="text-xs text-[#718096]">
+              Copy and safely store these credentials. Share them directly with the barangay administrator.
             </DialogDescription>
           </DialogHeader>
           {createdAdminCredentials && (
-            <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg space-y-3">
+            <div className="space-y-4 pt-2">
+              <div className="bg-[#F8FAFC] border border-[#E5EAF2] p-4 rounded-xl space-y-2.5 text-xs">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Barangay</p>
-                  <p className="font-semibold">{createdAdminCredentials.barangayName}</p>
+                  <p className="font-semibold text-[#718096]">Barangay Jurisdiction</p>
+                  <p className="font-bold text-sm text-[#102D56]">{createdAdminCredentials.barangayName}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Email</p>
-                  <p className="font-mono text-sm">{createdAdminCredentials.email}</p>
+                  <p className="font-semibold text-[#718096]">Login Email</p>
+                  <p className="font-mono font-bold text-sm text-[#246BDE]">{createdAdminCredentials.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Password</p>
-                  <p className="font-mono text-sm">{createdAdminCredentials.password}</p>
+                  <p className="font-semibold text-[#718096]">Temporary Password</p>
+                  <p className="font-mono font-bold text-sm text-[#172B4D]">{createdAdminCredentials.password}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
-                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <p>Make sure to save these credentials. They won't be shown again.</p>
+              <div className="flex items-start gap-2 text-xs text-[#FFA51E] bg-[#FFFBEB] p-3 rounded-xl border border-[#FDE68A]">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <p>This credentials card will only be displayed once. Copy them now to prevent lockout.</p>
               </div>
               <Button 
-                className="w-full" 
+                className="w-full rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold h-10 shadow-xs" 
                 onClick={() => {
                   navigator.clipboard.writeText(
                     `Barangay: ${createdAdminCredentials.barangayName}\nEmail: ${createdAdminCredentials.email}\nPassword: ${createdAdminCredentials.password}`
@@ -712,42 +989,44 @@ export default function BarangaysPage() {
 
       {/* Create Admin Dialog */}
       <Dialog open={createAdminDialogOpen} onOpenChange={setCreateAdminDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl border-[#E5EAF2]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-primary" />
-              Create Admin Account
+            <DialogTitle className="flex items-center gap-2 text-[#102D56]">
+              <UserPlus className="size-5 text-[#246BDE]" />
+              Provision Admin Account
             </DialogTitle>
-            <DialogDescription>
-              Create an admin account for {selectedBarangayForAdmin?.name}
+            <DialogDescription className="text-xs text-[#718096]">
+              Assign an administrative account for {selectedBarangayForAdmin?.name}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateAdmin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="adminNameCreate">Admin Name *</Label>
+          <form onSubmit={handleCreateAdmin} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="adminNameCreate" className="text-xs font-bold text-[#172B4D]">Admin Full Name *</Label>
               <Input
                 id="adminNameCreate"
                 value={adminFormData.name}
                 onChange={(e) => setAdminFormData({ ...adminFormData, name: e.target.value })}
                 placeholder="e.g., Juan Dela Cruz"
                 required
+                className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="adminEmailCreate">Admin Email *</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="adminEmailCreate" className="text-xs font-bold text-[#172B4D]">Admin Email *</Label>
               <Input
                 id="adminEmailCreate"
                 type="email"
                 value={adminFormData.email}
                 onChange={(e) => setAdminFormData({ ...adminFormData, email: e.target.value })}
-                placeholder="admin@barangay.gov.ph"
+                placeholder="admin@ibarangay.gov.ph"
                 required
+                className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="adminPasswordCreate">Admin Password *</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="adminPasswordCreate" className="text-xs font-bold text-[#172B4D]">Password *</Label>
               <Input
                 id="adminPasswordCreate"
                 type="password"
@@ -756,216 +1035,27 @@ export default function BarangaysPage() {
                 placeholder="Minimum 6 characters"
                 required
                 minLength={6}
+                className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm"
               />
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                This will create a new admin account for this barangay. Save the credentials to share with the admin.
+            <div className="bg-[#EFF6FF] p-3 rounded-xl border border-[#BFDBFE]">
+              <p className="text-xs text-[#1E40AF]">
+                This will enroll a new Admin role profile bound to this jurisdiction.
               </p>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setCreateAdminDialogOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setCreateAdminDialogOpen(false)} className="rounded-xl">
                 Cancel
               </Button>
-              <Button type="submit">
-                Create Admin Account
+              <Button type="submit" className="rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold">
+                Provision Admin
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">All Barangays</CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="font-semibold">
-                    {barangays.length} total
-                  </Badge>
-                  {searchQuery && (
-                    <Badge variant="outline" className="font-semibold">
-                      {filteredBarangays.length} matching
-                    </Badge>
-                  )}
-                </CardDescription>
-              </div>
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search barangays..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary w-72 transition-all"
-              />
-              <svg
-                className="absolute left-3 top-3 h-5 w-5 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-center text-muted-foreground py-8">Loading barangays...</p>
-          ) : filteredBarangays.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                {searchQuery 
-                  ? 'No barangays found matching your search.' 
-                  : 'No barangays found. Create one to get started.'}
-              </p>
-              {searchQuery && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSearchQuery('')}
-                  className="mt-4"
-                >
-                  Clear Search
-                </Button>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Admin Email</TableHead>
-                  <TableHead>Created Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBarangays.map((barangay) => {
-                  const admin = barangayAdmins[barangay.id];
-                  const createdDate = barangay.createdAt 
-                    ? new Date(barangay.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })
-                    : "—";
-                  
-                  return (
-                  <TableRow key={barangay.id} className="hover:bg-accent/50 transition-colors group">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${barangay.isActive ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                          <Building2 className={`h-5 w-5 ${barangay.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`} />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-base group-hover:text-primary transition-colors">{barangay.name}</div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <span>{barangay.municipality}, {barangay.province}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">{barangay.address}</div>
-                        {barangay.contactNumber && (
-                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <Mail className="h-3 w-3" />
-                            {barangay.contactNumber}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {admin ? (
-                          <div className="space-y-1">
-                            <div className="font-medium flex items-center gap-1">
-                              <Mail className="h-3 w-3 text-muted-foreground" />
-                              {admin.email}
-                            </div>
-                            <div className="text-xs text-muted-foreground">{admin.name}</div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                            <span className="text-xs text-muted-foreground">No admin assigned</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openCreateAdminDialog(barangay)}
-                              className="h-8 text-xs w-fit"
-                            >
-                              <UserPlus className="h-3 w-3 mr-1" />
-                              Create Admin
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        {createdDate}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={barangay.isActive ? "default" : "secondary"}
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => toggleActive(barangay)}
-                      >
-                        {barangay.isActive ? "✓ Active" : "○ Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(barangay)}
-                          className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          title="Edit barangay"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(barangay.id)}
-                          className="hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                          title="Delete barangay"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

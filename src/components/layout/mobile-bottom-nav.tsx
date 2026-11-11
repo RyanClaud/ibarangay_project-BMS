@@ -10,6 +10,7 @@ import {
   Users,
   CreditCard,
   BarChart3,
+  Building2,
   Menu,
 } from 'lucide-react';
 import { useAppContext } from '@/contexts/app-context';
@@ -26,6 +27,16 @@ export function MobileBottomNav() {
 
   // Primary mobile bottom navigation links per role
   const getMobileLinks = () => {
+    if (currentUser.isSuperAdmin) {
+      return [
+        { href: '/super-admin', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/barangays', label: 'Barangays', icon: Building2 },
+        { href: '/system-users', label: 'Users', icon: Users },
+        { href: '/system-analytics', label: 'Analytics', icon: BarChart3 },
+        { href: '/system-settings', label: 'Settings', icon: Settings },
+      ];
+    }
+
     switch (currentUser.role) {
       case 'Resident':
         return [

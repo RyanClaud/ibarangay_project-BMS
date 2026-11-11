@@ -4,20 +4,22 @@ import { useAppContext } from "@/contexts/app-context";
 import { useFirebase } from "@/firebase";
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { 
   AlertCircle, 
   TrendingUp, 
-  TrendingDown, 
   Activity, 
   BarChart3,
   Users,
   FileText,
   Building2,
-  CheckCircle,
+  CheckCircle2,
   Clock,
-  XCircle
+  Sparkles,
+  PieChart as PieIcon,
+  ShieldCheck,
+  Layers
 } from "lucide-react";
 import { 
   BarChart, 
@@ -36,7 +38,7 @@ import {
 } from 'recharts';
 import type { Barangay, User, Resident, DocumentRequest } from "@/lib/types";
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+const PALETTE = ['#246BDE', '#10A875', '#FFA51E', '#EF4655', '#8B5CF6', '#0284C7', '#F59E0B', '#14B8A6'];
 
 export default function SystemAnalyticsPage() {
   const { currentUser } = useAppContext();
@@ -57,15 +59,14 @@ export default function SystemAnalyticsPage() {
     usersByRole: {} as Record<string, number>,
   });
 
-  // Prepare pie chart data
-  const statusData = [
-    { name: 'Pending', value: analytics.pendingRequests, color: '#f59e0b' },
-    { name: 'Approved', value: analytics.approvedRequests, color: '#3b82f6' },
-    { name: 'Released', value: analytics.releasedRequests, color: '#10b981' },
-    { name: 'Rejected', value: analytics.rejectedRequests, color: '#ef4444' },
-  ].filter(item => item.value > 0);
-
   const isSuperAdmin = currentUser?.isSuperAdmin === true;
+
+  const statusData = [
+    { name: 'Pending Review', value: analytics.pendingRequests, color: '#FFA51E' },
+    { name: 'Approved', value: analytics.approvedRequests, color: '#246BDE' },
+    { name: 'Released', value: analytics.releasedRequests, color: '#10A875' },
+    { name: 'Rejected', value: analytics.rejectedRequests, color: '#EF4655' },
+  ].filter(item => item.value > 0);
 
   useEffect(() => {
     if (!isSuperAdmin || !firestore) return;
@@ -77,7 +78,6 @@ export default function SystemAnalyticsPage() {
     
     setIsLoading(true);
     try {
-      // Load all data
       const [barangaysSnap, usersSnap, residentsSnap, requestsSnap] = await Promise.all([
         getDocs(collection(firestore, 'barangays')),
         getDocs(collection(firestore, 'users')),
@@ -90,38 +90,39 @@ export default function SystemAnalyticsPage() {
       const residents = residentsSnap.docs.map(doc => doc.data() as Resident);
       const requests = requestsSnap.docs.map(doc => doc.data() as DocumentRequest);
 
-      // Calculate analytics
       const requestsByType: Record<string, number> = {};
       const usersByRole: Record<string, number> = {};
       
       requests.forEach(req => {
-        requestsByType[req.documentType] = (requestsByType[req.documentType] || 0) + 1;
+        const type = req.documentType || 'General Request';
+        requestsByType[type] = (requestsByType[type] || 0) + 1;
       });
 
       users.forEach(user => {
-        usersByRole[user.role] = (usersByRole[user.role] || 0) + 1;
+        const role = user.role || 'Unassigned';
+        usersByRole[role] = (usersByRole[role] || 0) + 1;
       });
 
-      // Barangay performance
       const barangayPerformance = barangays.map(barangay => {
         const barangayRequests = requests.filter(r => r.barangayId === barangay.id);
         const barangayResidents = residents.filter(r => r.barangayId === barangay.id);
+        const completed = barangayRequests.filter(r => r.status === 'Released').length;
         
         return {
           name: barangay.name,
           residents: barangayResidents.length,
           requests: barangayRequests.length,
           pending: barangayRequests.filter(r => r.status === 'Pending').length,
-          completed: barangayRequests.filter(r => r.status === 'Released').length,
+          completed,
           completionRate: barangayRequests.length > 0 
-            ? Math.round((barangayRequests.filter(r => r.status === 'Released').length / barangayRequests.length) * 100)
+            ? Math.round((completed / barangayRequests.length) * 100)
             : 0,
         };
       });
 
       setAnalytics({
         totalBarangays: barangays.length,
-        activeBarangays: barangays.filter(b => b.isActive).length,
+        activeBarangays: barangays.filter(b => b.isActive !== false).length,
         totalUsers: users.length,
         totalResidents: residents.length,
         totalRequests: requests.length,
@@ -143,32 +144,15 @@ export default function SystemAnalyticsPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Access Denied</h1>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p>You don't have permission to access System Analytics.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">System Analytics</h1>
-        <div className="grid gap-4 md:grid-cols-4">
-          {[1, 2, 3, 4].map(i => (
-            <Card key={i}>
-              <CardContent className="pt-6">
-                <div className="h-20 animate-pulse bg-muted rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-8 text-center space-y-3">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[#EF4655]/10 text-[#EF4655] mx-auto">
+            <AlertCircle className="size-6" />
+          </div>
+          <h2 className="text-xl font-bold text-[#172B4D]">Access Restricted</h2>
+          <p className="text-sm text-[#718096] max-w-md mx-auto">
+            System Analytics is restricted to Super Administrators with multi-barangay municipal oversight.
+          </p>
         </div>
       </div>
     );
@@ -179,314 +163,298 @@ export default function SystemAnalyticsPage() {
     : 0;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight flex items-center gap-2">
-          <BarChart3 className="h-8 w-8 text-primary" />
-          System Analytics
-        </h1>
-        <p className="text-muted-foreground">
-          Cross-barangay analytics and insights
-        </p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Executive Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C2340] via-[#123E75] to-[#1D5496] p-6 md:p-8 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-yellow-400/40 shrink-0 shadow-inner">
+            <BarChart3 className="size-8 text-yellow-400" />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-semibold text-blue-200 mb-1.5 backdrop-blur-xs">
+              <Sparkles className="size-3 text-yellow-400" />
+              <span>Cross-Barangay Municipal Intelligence</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+              System Analytics & Velocity
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-100/80 mt-0.5 max-w-xl">
+              Real-time multi-tenant request fulfillment rates, demographic concentrations, and cross-barangay compliance telemetry.
+            </p>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-2.5 shrink-0">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold text-white backdrop-blur-xs">
+            <Activity className="size-3.5 text-[#10A875]" />
+            <span>Telemetry Live</span>
+          </div>
+        </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+      {/* KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Total Clearances</span>
+            <div className="size-10 rounded-xl bg-[#2474E8] flex items-center justify-center text-white shadow-xs">
+              <FileText className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{analytics.totalRequests}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {analytics.pendingRequests} pending
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{analytics.totalRequests}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">{analytics.pendingRequests} Pending Review</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-green-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Completion Rate</span>
+            <div className="size-10 rounded-xl bg-[#10A875] flex items-center justify-center text-white shadow-xs">
+              <CheckCircle2 className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-700 dark:text-green-400">{completionRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {analytics.releasedRequests} completed
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{completionRate}%</div>
+            <p className="text-xs font-medium text-[#10A875] mt-1">{analytics.releasedRequests} Released to Citizens</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Barangays</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Building2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Active LGUs</span>
+            <div className="size-10 rounded-xl bg-[#8B5CF6] flex items-center justify-center text-white shadow-xs">
+              <Building2 className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">{analytics.activeBarangays}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              of {analytics.totalBarangays} total
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{analytics.activeBarangays}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">of {analytics.totalBarangays} Total Jurisdictions</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Residents</CardTitle>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <Users className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Census Records</span>
+            <div className="size-10 rounded-xl bg-[#FFA51E] flex items-center justify-center text-white shadow-xs">
+              <Users className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{analytics.totalResidents}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {analytics.totalUsers} users
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{analytics.totalResidents.toLocaleString()}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">{analytics.totalUsers} Platform Users</p>
+          </div>
+        </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="barangays">Barangay Performance</TabsTrigger>
-          <TabsTrigger value="documents">Document Types</TabsTrigger>
-          <TabsTrigger value="users">User Distribution</TabsTrigger>
-        </TabsList>
+      {/* Analytics Tabs */}
+      <Tabs defaultValue="overview" className="space-y-5">
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="inline-flex h-11 items-center justify-start rounded-xl bg-white border border-[#E5EAF2] p-1 text-[#718096] gap-1 shadow-xs">
+            <TabsTrigger
+              value="overview"
+              className="rounded-lg px-4 py-2 text-xs font-bold text-[#718096] transition-all data-[state=active]:bg-[#246BDE] data-[state=active]:text-white data-[state=active]:shadow-xs"
+            >
+              Executive Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="barangays"
+              className="rounded-lg px-4 py-2 text-xs font-bold text-[#718096] transition-all data-[state=active]:bg-[#246BDE] data-[state=active]:text-white data-[state=active]:shadow-xs"
+            >
+              Barangay Performance
+            </TabsTrigger>
+            <TabsTrigger
+              value="documents"
+              className="rounded-lg px-4 py-2 text-xs font-bold text-[#718096] transition-all data-[state=active]:bg-[#246BDE] data-[state=active]:text-white data-[state=active]:shadow-xs"
+            >
+              Document Clearances
+            </TabsTrigger>
+            <TabsTrigger
+              value="users"
+              className="rounded-lg px-4 py-2 text-xs font-bold text-[#718096] transition-all data-[state=active]:bg-[#246BDE] data-[state=active]:text-white data-[state=active]:shadow-xs"
+            >
+              User Demographics
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Request Status Distribution</CardTitle>
-                    <CardDescription>Current status of all document requests</CardDescription>
-                  </div>
+        <TabsContent value="overview" className="space-y-5">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#246BDE]/10 text-[#246BDE] flex items-center justify-center">
+                  <PieIcon className="size-4" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                {analytics.totalRequests === 0 ? (
-                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                    <div className="text-center">
-                      <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No request data available</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="w-full h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={statusData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={90}
-                            paddingAngle={2}
-                            dataKey="value"
-                          >
-                            {statusData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            formatter={(value: any) => [`${value} requests`, 'Count']}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-[#f59e0b]"></div>
-                        <span>Pending: {analytics.pendingRequests}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
-                        <span>Approved: {analytics.approvedRequests}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-[#10b981]"></div>
-                        <span>Released: {analytics.releasedRequests}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-[#ef4444]"></div>
-                        <span>Rejected: {analytics.rejectedRequests}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">Request Status Distribution</h3>
+                  <p className="text-xs text-[#718096]">Breakdown across all municipal barangays</p>
+                </div>
+              </div>
 
-            <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
+              {analytics.totalRequests === 0 ? (
+                <div className="flex items-center justify-center h-64 text-xs text-[#718096]">
+                  No document requests recorded yet.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="w-full h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={95}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {statusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                  <div>
-                    <CardTitle>System Health Metrics</CardTitle>
-                    <CardDescription>Overall system performance indicators</CardDescription>
+
+                  <div className="grid grid-cols-2 gap-2.5 text-xs pt-2 border-t border-[#E5EAF2]">
+                    <div className="flex items-center gap-2">
+                      <div className="size-2.5 rounded-full bg-[#FFA51E]"></div>
+                      <span className="font-medium text-[#172B4D]">Pending: {analytics.pendingRequests}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="size-2.5 rounded-full bg-[#246BDE]"></div>
+                      <span className="font-medium text-[#172B4D]">Approved: {analytics.approvedRequests}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="size-2.5 rounded-full bg-[#10A875]"></div>
+                      <span className="font-medium text-[#172B4D]">Released: {analytics.releasedRequests}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="size-2.5 rounded-full bg-[#EF4655]"></div>
+                      <span className="font-medium text-[#172B4D]">Rejected: {analytics.rejectedRequests}</span>
+                    </div>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#10A875]/10 text-[#10A875] flex items-center justify-center">
+                  <TrendingUp className="size-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">System Health & Adoption</h3>
+                  <p className="text-xs text-[#718096]">Platform percentage indicators</p>
+                </div>
+              </div>
+
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={[
-                      {
-                        name: 'Completion Rate',
-                        value: completionRate,
-                        fill: '#10b981'
-                      },
-                      {
-                        name: 'Active Barangays',
-                        value: analytics.totalBarangays > 0 ? Math.round((analytics.activeBarangays / analytics.totalBarangays) * 100) : 0,
-                        fill: '#3b82f6'
-                      },
-                      {
-                        name: 'Avg Residents',
-                        value: analytics.totalBarangays > 0 ? Math.min(Math.round(analytics.totalResidents / analytics.totalBarangays), 100) : 0,
-                        fill: '#8b5cf6'
-                      },
+                      { name: 'Completion %', value: completionRate, fill: '#10A875' },
+                      { name: 'Active LGUs %', value: analytics.totalBarangays > 0 ? Math.round((analytics.activeBarangays / analytics.totalBarangays) * 100) : 0, fill: '#246BDE' },
+                      { name: 'Avg Pop Index', value: analytics.totalBarangays > 0 ? Math.min(Math.round(analytics.totalResidents / analytics.totalBarangays), 100) : 0, fill: '#8B5CF6' },
                     ]}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F0F4FA" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#718096' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#718096' }} domain={[0, 100]} />
                     <Tooltip />
-                    <Bar dataKey="value" />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
         {/* Barangay Performance Tab */}
-        <TabsContent value="barangays" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-t-4 border-t-purple-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Barangay Requests Comparison</CardTitle>
-                    <CardDescription>Total requests per barangay</CardDescription>
-                  </div>
+        <TabsContent value="barangays" className="space-y-5">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#246BDE]/10 text-[#246BDE] flex items-center justify-center">
+                  <BarChart3 className="size-4" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">Top Request Volume by Barangay</h3>
+                  <p className="text-xs text-[#718096]">Top 10 highest-volume LGU jurisdictions</p>
+                </div>
+              </div>
+
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={analytics.barangayPerformance.slice(0, 10)}
                     layout="vertical"
-                    margin={{ left: 100 }}
+                    margin={{ left: 60 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={90} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F0F4FA" />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#718096' }} />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fill: '#172B4D' }} />
                     <Tooltip />
-                    <Legend />
-                    <Bar dataKey="requests" fill="#3b82f6" name="Total Requests" />
-                    <Bar dataKey="completed" fill="#10b981" name="Completed" />
-                    <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    <Bar dataKey="requests" fill="#246BDE" name="Total Requests" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="completed" fill="#10A875" name="Completed" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="pending" fill="#FFA51E" name="Pending" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Completion Rate by Barangay</CardTitle>
-                    <CardDescription>Performance efficiency comparison</CardDescription>
-                  </div>
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#10A875]/10 text-[#10A875] flex items-center justify-center">
+                  <CheckCircle2 className="size-4" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">Fulfillment Rate by Barangay</h3>
+                  <p className="text-xs text-[#718096]">Completion efficiency percentage ranking</p>
+                </div>
+              </div>
+
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={analytics.barangayPerformance
                       .sort((a, b) => b.completionRate - a.completionRate)
                       .slice(0, 10)}
                     layout="vertical"
-                    margin={{ left: 100 }}
+                    margin={{ left: 60 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" domain={[0, 100]} />
-                    <YAxis dataKey="name" type="category" width={90} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F0F4FA" />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#718096' }} />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fill: '#172B4D' }} />
                     <Tooltip />
-                    <Bar dataKey="completionRate" fill="#10b981" name="Completion Rate %" />
+                    <Bar dataKey="completionRate" fill="#10A875" name="Completion Rate %" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <CardTitle>Residents Distribution</CardTitle>
-                  <CardDescription>Number of residents per barangay</CardDescription>
-                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analytics.barangayPerformance}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="residents" stroke="#8b5cf6" strokeWidth={2} name="Residents" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Document Types Tab */}
-        <TabsContent value="documents" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-t-4 border-t-orange-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent dark:from-orange-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                    <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Document Request Types</CardTitle>
-                    <CardDescription>Distribution of document types requested</CardDescription>
-                  </div>
+        <TabsContent value="documents" className="space-y-5">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#FFA51E]/10 text-[#FFA51E] flex items-center justify-center">
+                  <FileText className="size-4" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">Clearance Type Distribution</h3>
+                  <p className="text-xs text-[#718096]">Proportion of requests by document category</p>
+                </div>
+              </div>
+
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={Object.entries(analytics.requestsByType)
@@ -494,70 +462,67 @@ export default function SystemAnalyticsPage() {
                         .map(([type, count]) => ({ name: type, value: count }))}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name.substring(0, 15)} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={100}
+                      outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
                     >
                       {Object.entries(analytics.requestsByType).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={PALETTE[index % PALETTE.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                   </PieChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Document Type Breakdown</CardTitle>
-                    <CardDescription>Request count by document type</CardDescription>
-                  </div>
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#246BDE]/10 text-[#246BDE] flex items-center justify-center">
+                  <BarChart3 className="size-4" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">Transaction Count by Type</h3>
+                  <p className="text-xs text-[#718096]">Aggregate demand per clearance category</p>
+                </div>
+              </div>
+
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={Object.entries(analytics.requestsByType)
                       .sort(([, a], [, b]) => b - a)
                       .map(([type, count]) => ({ name: type, count }))}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F0F4FA" />
+                    <XAxis dataKey="name" angle={-30} textAnchor="end" height={80} tick={{ fontSize: 10, fill: '#718096' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#718096' }} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" />
+                    <Bar dataKey="count" fill="#246BDE" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
         {/* Users Tab */}
-        <TabsContent value="users" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-t-4 border-t-purple-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                    <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <CardTitle>User Role Distribution</CardTitle>
-                    <CardDescription>Users by role across all barangays</CardDescription>
-                  </div>
+        <TabsContent value="users" className="space-y-5">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#8B5CF6]/10 text-[#8B5CF6] flex items-center justify-center">
+                  <Users className="size-4" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">Role Distribution</h3>
+                  <p className="text-xs text-[#718096]">Distribution of platform access roles</p>
+                </div>
+              </div>
+
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={Object.entries(analytics.usersByRole)
@@ -565,83 +530,48 @@ export default function SystemAnalyticsPage() {
                         .map(([role, count]) => ({ name: role, value: count }))}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
+                      outerRadius={90}
                       dataKey="value"
                     >
                       {Object.entries(analytics.usersByRole).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={PALETTE[index % PALETTE.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                   </PieChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <CardTitle>User Count by Role</CardTitle>
-                    <CardDescription>Total users in each role</CardDescription>
-                  </div>
+            <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+                <div className="size-9 rounded-xl bg-[#10A875]/10 text-[#10A875] flex items-center justify-center">
+                  <BarChart3 className="size-4" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <div>
+                  <h3 className="text-base font-bold text-[#102D56]">Account Volumes by Role</h3>
+                  <p className="text-xs text-[#718096]">Total enrolled officers and residents</p>
+                </div>
+              </div>
+
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={Object.entries(analytics.usersByRole)
                       .sort(([, a], [, b]) => b - a)
                       .map(([role, count]) => ({ name: role, count }))}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F0F4FA" />
+                    <XAxis dataKey="name" angle={-30} textAnchor="end" height={80} tick={{ fontSize: 10, fill: '#718096' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#718096' }} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" />
+                    <Bar dataKey="count" fill="#10A875" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <CardTitle>System Overview</CardTitle>
-                  <CardDescription>Total users and residents across the system</CardDescription>
-                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart
-                  data={[
-                    { category: 'Total Users', count: analytics.totalUsers, fill: '#3b82f6' },
-                    { category: 'Total Residents', count: analytics.totalResidents, fill: '#10b981' },
-                    { category: 'Active Barangays', count: analytics.activeBarangays, fill: '#8b5cf6' },
-                  ]}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="category" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

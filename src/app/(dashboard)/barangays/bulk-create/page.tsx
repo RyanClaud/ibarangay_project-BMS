@@ -3,13 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useFirebase } from '@/firebase';
 import { collection, writeBatch, doc, query, where, getDocs } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle, Building2, MapPin } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  CheckCircle, 
+  Building2, 
+  MapPin, 
+  Layers, 
+  Sparkles, 
+  CheckCircle2, 
+  AlertCircle 
+} from 'lucide-react';
 import Link from 'next/link';
 import {
   Select,
@@ -45,12 +53,10 @@ export default function BulkCreateBarangaysPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [existingBarangays, setExistingBarangays] = useState<Set<string>>(new Set());
 
-  // Load Oriental Mindoro municipalities on mount
   useEffect(() => {
     loadMunicipalities();
   }, []);
 
-  // Load barangays when municipality is selected
   useEffect(() => {
     if (selectedMunicipality) {
       loadBarangays(selectedMunicipality);
@@ -62,7 +68,6 @@ export default function BulkCreateBarangaysPage() {
     try {
       const { provinces, municipalities: allMunicipalities } = phData;
       
-      // Find Oriental Mindoro
       const orientalMindoro = provinces.find((p: any) => 
         p.name && p.name.toLowerCase().includes('oriental mindoro')
       );
@@ -76,7 +81,6 @@ export default function BulkCreateBarangaysPage() {
         return;
       }
       
-      // Get municipalities in Oriental Mindoro
       const orientalMindoroMunicipalities = allMunicipalities
         .filter((m: any) => m.provinceId === orientalMindoro.provinceId)
         .map((m: any) => ({
@@ -178,7 +182,6 @@ export default function BulkCreateBarangaysPage() {
 
       const barangaysToCreate = barangays.filter(b => selectedBarangays.has(b.name));
       
-      // Create in batches of 500 (Firestore limit)
       for (let i = 0; i < barangaysToCreate.length; i += 500) {
         const batch = writeBatch(firestore);
         const batchData = barangaysToCreate.slice(i, i + 500);
@@ -186,7 +189,6 @@ export default function BulkCreateBarangaysPage() {
         for (const barangay of batchData) {
           const docRef = doc(collection(firestore, 'barangays'));
           
-          // Generate admin email
           const cleanName = barangay.name
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '')
@@ -213,10 +215,9 @@ export default function BulkCreateBarangaysPage() {
 
       toast({
         title: 'Success',
-        description: `Created ${barangaysToCreate.length} barangays successfully. Admin accounts can be created separately from the Barangays page.`,
+        description: `Provisioned ${barangaysToCreate.length} barangay jurisdictions successfully.`,
       });
 
-      // Refresh existing barangays
       await checkExistingBarangays(selectedMunicipality);
       setSelectedBarangays(new Set());
       
@@ -236,201 +237,214 @@ export default function BulkCreateBarangaysPage() {
   const availableBarangays = barangays.filter(b => !existingBarangays.has(b.name));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/barangays">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Bulk Create Barangays</h1>
-          <p className="text-muted-foreground">Create multiple barangays from official PSGC data</p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Executive Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C2340] via-[#123E75] to-[#1D5496] p-6 md:p-8 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative z-10 flex items-center gap-4">
+          <Link href="/barangays">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-xs shrink-0"
+            >
+              <ArrowLeft className="size-5" />
+            </Button>
+          </Link>
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-semibold text-blue-200 mb-1.5 backdrop-blur-xs">
+              <Sparkles className="size-3 text-yellow-400" />
+              <span>PSGC Standard Geodatabase • Oriental Mindoro</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+              Bulk Provision Barangays
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-100/80 mt-0.5 max-w-xl">
+              Rapidly enroll multiple municipal barangay units from official Philippine Standard Geographic Code data.
+            </p>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-2.5 shrink-0">
+          <Link href="/barangays">
+            <Button
+              variant="outline"
+              className="rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-xs font-semibold h-10 px-4 text-xs sm:text-sm"
+            >
+              View Roster
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Info Card */}
-      <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                <MapPin className="h-4 w-4" />
-              </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Municipality Selection Card */}
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-5 lg:col-span-1">
+          <div className="flex items-center gap-3 pb-4 border-b border-[#E5EAF2]">
+            <div className="size-10 rounded-xl bg-[#2474E8]/10 text-[#2474E8] flex items-center justify-center">
+              <Building2 className="size-5" />
             </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Bulk Create Workflow
-              </p>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                This feature creates barangay records only. Admin accounts can be created separately 
-                from the Barangays page using the "Create Admin" button for each barangay.
-              </p>
+            <div>
+              <h2 className="text-base font-bold text-[#102D56]">Select Municipality</h2>
+              <p className="text-xs text-[#718096]">Choose municipal cluster in Oriental Mindoro</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Municipality Selection */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Select Municipality
-            </CardTitle>
-            <CardDescription>Choose a municipality in Oriental Mindoro</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Municipality</Label>
-              <Select value={selectedMunicipality} onValueChange={setSelectedMunicipality}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select municipality..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {municipalities.map((municipality) => (
-                    <SelectItem key={municipality.code} value={municipality.code}>
-                      {municipality.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-[#172B4D]">Target LGU Cluster</Label>
+            <Select value={selectedMunicipality} onValueChange={setSelectedMunicipality}>
+              <SelectTrigger className="h-11 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] font-medium">
+                <SelectValue placeholder="Choose municipality..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-[#E5EAF2]">
+                {municipalities.map((municipality) => (
+                  <SelectItem key={municipality.code} value={municipality.code}>
+                    {municipality.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {selectedMunicipalityData && (
-              <div className="space-y-3 pt-4 border-t">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Barangays:</span>
-                  <span className="font-medium">{barangays.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Already Created:</span>
-                  <span className="font-medium">{existingBarangays.size}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Available:</span>
-                  <span className="font-medium text-green-600">{availableBarangays.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Selected:</span>
-                  <span className="font-medium text-blue-600">{selectedBarangays.size}</span>
-                </div>
+          {selectedMunicipalityData && (
+            <div className="rounded-xl bg-[#F8FAFC] border border-[#E5EAF2] p-4 space-y-2.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#718096] font-medium">Total PSGC Units:</span>
+                <span className="font-bold text-[#102D56]">{barangays.length}</span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <div className="flex justify-between">
+                <span className="text-[#718096] font-medium">Already Registered:</span>
+                <span className="font-bold text-[#102D56]">{existingBarangays.size}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#718096] font-medium">Available to Provision:</span>
+                <span className="font-bold text-[#10A875]">{availableBarangays.length}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[#E5EAF2]">
+                <span className="text-[#172B4D] font-bold">Selected to Create:</span>
+                <span className="font-extrabold text-[#246BDE]">{selectedBarangays.size}</span>
+              </div>
+            </div>
+          )}
+        </div>
 
-        {/* Barangay Selection */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
+        {/* Barangay Selection Card */}
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs lg:col-span-2 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#E5EAF2] gap-3">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-[#10A875]/10 text-[#10A875] flex items-center justify-center">
+                <MapPin className="size-5" />
+              </div>
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Select Barangays
-                </CardTitle>
-                <CardDescription>
+                <h2 className="text-base font-bold text-[#102D56]">Select Jurisdictions</h2>
+                <p className="text-xs text-[#718096]">
                   {selectedMunicipalityData 
-                    ? `Choose barangays to create in ${selectedMunicipalityData.name}`
-                    : 'Select a municipality first'}
-                </CardDescription>
+                    ? `Barangays in ${selectedMunicipalityData.name} ready for batch enrollment` 
+                    : 'Select a municipality on the left to load its barangay units'}
+                </p>
               </div>
-              {barangays.length > 0 && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={selectAll}
-                    disabled={availableBarangays.length === 0}
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={deselectAll}
-                    disabled={selectedBarangays.size === 0}
-                  >
-                    Deselect All
-                  </Button>
-                </div>
-              )}
             </div>
-          </CardHeader>
-          <CardContent>
-            {!selectedMunicipality ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Select a municipality to view its barangays</p>
-              </div>
-            ) : barangays.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No barangays found for this municipality</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[500px] overflow-y-auto p-2">
-                  {barangays.map((barangay) => {
-                    const isExisting = existingBarangays.has(barangay.name);
-                    const isSelected = selectedBarangays.has(barangay.name);
-                    
-                    return (
-                      <div
-                        key={barangay.code}
-                        className={`flex items-center space-x-2 p-3 rounded-lg border transition-colors ${
-                          isExisting
-                            ? 'bg-muted/50 opacity-60'
-                            : isSelected
-                            ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700'
-                            : 'hover:bg-muted/50'
-                        }`}
-                      >
-                        <Checkbox
-                          id={barangay.code}
-                          checked={isSelected}
-                          onCheckedChange={() => toggleBarangay(barangay.name)}
-                          disabled={isExisting || isCreating}
-                        />
-                        <label
-                          htmlFor={barangay.code}
-                          className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {barangay.name}
-                          {isExisting && (
-                            <span className="ml-2 text-xs text-muted-foreground">(Already created)</span>
-                          )}
-                        </label>
-                        {isSelected && <CheckCircle className="h-4 w-4 text-blue-600" />}
-                      </div>
-                    );
-                  })}
-                </div>
 
-                <div className="flex gap-3 pt-4 border-t">
-                  <Button
-                    onClick={handleCreate}
-                    disabled={selectedBarangays.size === 0 || isCreating}
-                    className="flex-1"
-                  >
-                    {isCreating ? (
-                      <>Creating {selectedBarangays.size} barangays...</>
-                    ) : (
-                      <>Create {selectedBarangays.size} Selected Barangays</>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push('/barangays')}
-                  >
-                    View All Barangays
-                  </Button>
-                </div>
+            {barangays.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAll}
+                  disabled={availableBarangays.length === 0}
+                  className="rounded-xl border-[#E5EAF2] text-xs font-semibold h-8"
+                >
+                  Select All ({availableBarangays.length})
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deselectAll}
+                  disabled={selectedBarangays.size === 0}
+                  className="rounded-xl border-[#E5EAF2] text-xs font-semibold h-8"
+                >
+                  Deselect
+                </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+
+          {!selectedMunicipality ? (
+            <div className="text-center py-16 text-[#718096] space-y-2">
+              <Building2 className="size-12 mx-auto text-[#CBD5E1]" />
+              <p className="font-semibold text-[#172B4D]">Awaiting Municipality Selection</p>
+              <p className="text-xs text-[#718096]">Please choose a municipal cluster from the left panel.</p>
+            </div>
+          ) : barangays.length === 0 ? (
+            <div className="text-center py-16 text-[#718096] space-y-2">
+              <MapPin className="size-12 mx-auto text-[#CBD5E1]" />
+              <p className="font-semibold text-[#172B4D]">No barangays cataloged</p>
+              <p className="text-xs text-[#718096]">No official PSGC barangays found for this municipality.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+                {barangays.map((barangay) => {
+                  const isExisting = existingBarangays.has(barangay.name);
+                  const isSelected = selectedBarangays.has(barangay.name);
+                  
+                  return (
+                    <div
+                      key={barangay.code}
+                      onClick={() => !isExisting && !isCreating && toggleBarangay(barangay.name)}
+                      className={`flex items-center space-x-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
+                        isExisting
+                          ? 'bg-slate-50 border-[#E2E8F0] opacity-60 cursor-not-allowed'
+                          : isSelected
+                          ? 'bg-[#246BDE]/10 border-[#246BDE] shadow-xs'
+                          : 'border-[#E5EAF2] bg-white hover:bg-[#F8FAFC]'
+                      }`}
+                    >
+                      <Checkbox
+                        id={barangay.code}
+                        checked={isSelected}
+                        onCheckedChange={() => toggleBarangay(barangay.name)}
+                        disabled={isExisting || isCreating}
+                        className="data-[state=checked]:bg-[#246BDE]"
+                      />
+                      <label
+                        htmlFor={barangay.code}
+                        className="flex-1 text-xs font-bold leading-none cursor-pointer text-[#172B4D]"
+                      >
+                        {barangay.name}
+                        {isExisting && (
+                          <span className="block mt-1 text-[11px] font-normal text-[#718096]">Already Enrolled</span>
+                        )}
+                      </label>
+                      {isSelected && <CheckCircle className="size-4 text-[#246BDE] shrink-0" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-[#E5EAF2]">
+                <Button
+                  onClick={handleCreate}
+                  disabled={selectedBarangays.size === 0 || isCreating}
+                  className="w-full sm:flex-1 h-11 rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold shadow-xs text-xs sm:text-sm"
+                >
+                  {isCreating ? (
+                    <>Provisioning {selectedBarangays.size} Barangays...</>
+                  ) : (
+                    <>Provision {selectedBarangays.size} Selected Jurisdictions</>
+                  )}
+                </Button>
+                <Link href="/barangays" className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    className="w-full h-11 rounded-xl border-[#E5EAF2] text-xs font-semibold text-[#172B4D]"
+                  >
+                    Return to Roster
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

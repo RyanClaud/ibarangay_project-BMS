@@ -4,12 +4,26 @@ import { useAppContext } from "@/contexts/app-context";
 import { useFirebase } from "@/firebase";
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, FileText, Download, Calendar, Building2, FileSpreadsheet, Loader2, RefreshCw, Users, FileCheck, Clock, TrendingUp, Activity } from "lucide-react";
+import { 
+  AlertCircle, 
+  FileText, 
+  Download, 
+  Building2, 
+  FileSpreadsheet, 
+  Loader2, 
+  RefreshCw, 
+  Users, 
+  FileCheck, 
+  Clock, 
+  TrendingUp, 
+  Sparkles,
+  Layers,
+  CheckCircle2
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { Barangay, User, Resident, DocumentRequest } from "@/lib/types";
 import * as XLSX from 'xlsx';
@@ -39,7 +53,6 @@ export default function SystemReportsPage() {
     if (!isSuperAdmin || !firestore) return;
     loadData();
     
-    // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       loadData();
     }, 30000);
@@ -115,7 +128,6 @@ export default function SystemReportsPage() {
       const residents = residentsSnap.docs.map(doc => doc.data());
       const requests = requestsSnap.docs.map(doc => doc.data());
 
-      // Filter by barangay if selected
       const filteredUsers = selectedBarangay === 'all' ? users : users.filter((u: any) => u.barangayId === selectedBarangay);
       const filteredResidents = selectedBarangay === 'all' ? residents : residents.filter((r: any) => r.barangayId === selectedBarangay);
       const filteredRequests = selectedBarangay === 'all' ? requests : requests.filter((r: any) => r.barangayId === selectedBarangay);
@@ -166,12 +178,12 @@ export default function SystemReportsPage() {
         XLSX.utils.book_append_sheet(wb, ws, 'Requests');
       }
 
-      const fileName = `iBarangay_Report_${selectedBarangay}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `iBarangay_Audit_Report_${selectedBarangay}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
       toast({
         title: "Report Generated",
-        description: `${fileName} has been downloaded`,
+        description: `${fileName} has been exported to your downloads`,
       });
     } catch (error) {
       console.error('Error generating report:', error);
@@ -187,333 +199,325 @@ export default function SystemReportsPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Access Denied</h1>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p>You don't have permission to access System Reports.</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-8 text-center space-y-3">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[#EF4655]/10 text-[#EF4655] mx-auto">
+            <AlertCircle className="size-6" />
+          </div>
+          <h2 className="text-xl font-bold text-[#172B4D]">Access Restricted</h2>
+          <p className="text-sm text-[#718096] max-w-md mx-auto">
+            You don't have permission to access System Reports. Only Super Administrators can export multi-barangay data workbooks.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight flex items-center gap-2">
-            <FileText className="h-8 w-8 text-primary" />
-            System Reports
-          </h1>
-          <p className="text-muted-foreground">
-            Generate and export cross-barangay reports
-          </p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Executive Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C2340] via-[#123E75] to-[#1D5496] p-6 md:p-8 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-yellow-400/40 shrink-0 shadow-inner">
+            <FileSpreadsheet className="size-8 text-yellow-400" />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-semibold text-blue-200 mb-1.5 backdrop-blur-xs">
+              <Sparkles className="size-3 text-yellow-400" />
+              <span>Multi-Barangay Institutional Intelligence</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+              System Audit & Export Reports
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-100/80 mt-0.5 max-w-xl">
+              Compile cross-barangay demographic census registers, document clearance audit logs, and municipal summaries in standard Excel format.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            <Clock className="h-3 w-3 mr-1" />
-            Updated: {lastUpdated.toLocaleTimeString()}
+
+        <div className="relative z-10 flex items-center gap-2.5 shrink-0">
+          <Badge variant="outline" className="rounded-xl border-white/20 bg-white/10 text-white text-xs px-3 py-1.5 backdrop-blur-xs">
+            <Clock className="size-3 mr-1.5 text-yellow-400" />
+            {lastUpdated.toLocaleTimeString()}
           </Badge>
           <Button
             variant="outline"
             size="sm"
             onClick={loadData}
             disabled={isLoadingStats}
+            className="rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-xs font-semibold h-10 px-4 text-xs"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingStats ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-3.5 mr-2 ${isLoadingStats ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
       </div>
 
-      {/* Live Statistics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Barangays</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+      {/* Live Statistics Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Jurisdictions</span>
+            <div className="size-10 rounded-xl bg-[#2474E8] flex items-center justify-center text-white shadow-xs">
+              <Building2 className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{liveStats.totalBarangays}</div>
-            <p className="text-xs text-muted-foreground mt-1">Active in system</p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{liveStats.totalBarangays}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">Active Multi-Tenant Units</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Residents</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Enrolled Residents</span>
+            <div className="size-10 rounded-xl bg-[#8B5CF6] flex items-center justify-center text-white shadow-xs">
+              <Users className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">{liveStats.totalResidents}</div>
-            <p className="text-xs text-muted-foreground mt-1">{liveStats.totalUsers} users</p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{liveStats.totalResidents.toLocaleString()}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">{liveStats.totalUsers} Portal Users</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-green-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <FileCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Clearance Logs</span>
+            <div className="size-10 rounded-xl bg-[#10A875] flex items-center justify-center text-white shadow-xs">
+              <FileCheck className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-700 dark:text-green-400">{liveStats.totalRequests}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {liveStats.pendingRequests} pending
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{liveStats.totalRequests.toLocaleString()}</div>
+            <p className="text-xs font-medium text-[#10A875] mt-1">{liveStats.completedRequests} Released Overall</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Requests</CardTitle>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Today's Activity</span>
+            <div className="size-10 rounded-xl bg-[#FFA51E] flex items-center justify-center text-white shadow-xs">
+              <TrendingUp className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{liveStats.todayRequests}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {liveStats.completedRequests} completed total
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#102D56]">{liveStats.todayRequests}</div>
+            <p className="text-xs font-medium text-[#FFA51E] mt-1">{liveStats.pendingRequests} Awaiting Action</p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="md:col-span-2 border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <FileSpreadsheet className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <CardTitle>Generate Report</CardTitle>
-                <CardDescription>
-                  Select report parameters and export to Excel
-                </CardDescription>
-              </div>
+      {/* Generator & Quick Actions Section */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs md:col-span-2 space-y-5">
+          <div className="flex items-center gap-3 pb-4 border-b border-[#E5EAF2]">
+            <div className="size-10 rounded-xl bg-[#2474E8]/10 text-[#246BDE] flex items-center justify-center">
+              <FileSpreadsheet className="size-5" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Report Type</Label>
+            <div>
+              <h2 className="text-base font-bold text-[#102D56]">Generate Audit Workbook</h2>
+              <p className="text-xs text-[#718096]">Select workbook scope and export directly to Microsoft Excel (.xlsx)</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-[#172B4D]">Report Category</Label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] font-medium">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="summary">Summary Report</SelectItem>
-                  <SelectItem value="residents">Residents Report</SelectItem>
-                  <SelectItem value="requests">Document Requests Report</SelectItem>
-                  <SelectItem value="all">Complete Report (All Data)</SelectItem>
+                <SelectContent className="rounded-xl border-[#E5EAF2]">
+                  <SelectItem value="summary">Municipal Summary Roster</SelectItem>
+                  <SelectItem value="residents">Demographic Citizen Registry</SelectItem>
+                  <SelectItem value="requests">Document Clearance Logs</SelectItem>
+                  <SelectItem value="all">Complete Master Workbook (All Sheets)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Barangay</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-[#172B4D]">Barangay Tenant Scope</Label>
               <Select value={selectedBarangay} onValueChange={setSelectedBarangay}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] font-medium">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Barangays</SelectItem>
+                <SelectContent className="rounded-xl border-[#E5EAF2]">
+                  <SelectItem value="all">All Barangays ({barangays.length} Units)</SelectItem>
                   {barangays.map(b => (
                     <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
+          <div className="pt-2">
             <Button 
               onClick={generateExcelReport} 
               disabled={isLoading}
-              className="w-full"
+              className="w-full h-11 rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold shadow-xs text-xs sm:text-sm"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Compiling Excel Sheets...
                 </>
               ) : (
                 <>
-                  <Download className="mr-2 h-4 w-4" />
-                  Generate Excel Report
+                  <Download className="mr-2 size-4" />
+                  Generate & Download Excel Workbook
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="border-t-4 border-t-green-500 hover:shadow-xl transition-all">
-          <CardHeader className="bg-gradient-to-r from-green-50 to-transparent dark:from-green-950">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <CardTitle>Quick Reports</CardTitle>
-                <CardDescription>Pre-configured reports</CardDescription>
-              </div>
+        {/* Quick Report Presets */}
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+          <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+            <div className="size-9 rounded-xl bg-[#10A875]/10 text-[#10A875] flex items-center justify-center">
+              <FileCheck className="size-4" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
+            <div>
+              <h2 className="text-sm font-bold text-[#102D56]">Instant Presets</h2>
+              <p className="text-[11px] text-[#718096]">Quick multi-barangay downloads</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start"
+              className="w-full justify-start h-10 rounded-xl border-[#E5EAF2] text-xs font-bold text-[#172B4D] hover:bg-[#F8FAFC]"
               onClick={() => {
                 setReportType('summary');
                 setSelectedBarangay('all');
+                setTimeout(() => generateExcelReport(), 100);
               }}
             >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              System Summary
+              <FileSpreadsheet className="mr-2 size-4 text-[#246BDE]" />
+              Multi-LGU Executive Summary
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start"
+              className="w-full justify-start h-10 rounded-xl border-[#E5EAF2] text-xs font-bold text-[#172B4D] hover:bg-[#F8FAFC]"
               onClick={() => {
                 setReportType('residents');
                 setSelectedBarangay('all');
+                setTimeout(() => generateExcelReport(), 100);
               }}
             >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              All Residents
+              <Users className="mr-2 size-4 text-[#8B5CF6]" />
+              Consolidated Citizen Registry
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start"
+              className="w-full justify-start h-10 rounded-xl border-[#E5EAF2] text-xs font-bold text-[#172B4D] hover:bg-[#F8FAFC]"
               onClick={() => {
                 setReportType('requests');
                 setSelectedBarangay('all');
+                setTimeout(() => generateExcelReport(), 100);
               }}
             >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              All Requests
+              <FileCheck className="mr-2 size-4 text-[#10A875]" />
+              Clearance Transaction Ledger
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-t-4 border-t-purple-500 hover:shadow-xl transition-all">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <FileSpreadsheet className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <CardTitle>Report Types</CardTitle>
-                <CardDescription>Available report formats and contents</CardDescription>
-              </div>
+      {/* Information & Schema Overview */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+          <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+            <div className="size-9 rounded-xl bg-[#8B5CF6]/10 text-[#8B5CF6] flex items-center justify-center">
+              <Layers className="size-4" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <FileSpreadsheet className="h-4 w-4 text-primary" />
-                  Summary Report
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Overview of all barangays with key metrics: users, residents, requests, and completion rates.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  Residents Report
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Detailed list of all residents with personal information and barangay assignment.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <FileCheck className="h-4 w-4 text-primary" />
-                  Document Requests Report
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Complete list of document requests with status, dates, and tracking information.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  Complete Report
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  All data in one file with multiple sheets for comprehensive analysis.
-                </p>
-              </div>
+            <div>
+              <h3 className="text-base font-bold text-[#102D56]">Export Schema & Formats</h3>
+              <p className="text-xs text-[#718096]">Structure of generated Excel files</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="border-t-4 border-t-orange-500 hover:shadow-xl transition-all">
-          <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent dark:from-orange-950">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                <Activity className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <CardTitle>Real-Time Monitoring</CardTitle>
-                <CardDescription>Live system statistics</CardDescription>
-              </div>
+          <div className="space-y-3.5 text-xs">
+            <div className="rounded-xl border border-[#E5EAF2] p-3.5 bg-[#F8FAFC]">
+              <p className="font-bold text-[#102D56] flex items-center gap-1.5">
+                <FileSpreadsheet className="size-3.5 text-[#246BDE]" />
+                Summary Sheet
+              </p>
+              <p className="text-[#718096] mt-0.5">Barangay-by-barangay metric comparison with enrolled users, census count, clearance velocity, and fulfillment index.</p>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-medium">Pending Requests</span>
-                </div>
-                <Badge variant="secondary" className="text-lg font-bold">
-                  {liveStats.pendingRequests}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-2">
-                  <FileCheck className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-medium">Completed Today</span>
-                </div>
-                <Badge variant="secondary" className="text-lg font-bold">
-                  {liveStats.todayRequests}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-medium">Completion Rate</span>
-                </div>
-                <Badge variant="secondary" className="text-lg font-bold">
-                  {liveStats.totalRequests > 0 
-                    ? Math.round((liveStats.completedRequests / liveStats.totalRequests) * 100)
-                    : 0}%
-                </Badge>
-              </div>
 
-              <div className="pt-3 border-t">
-                <p className="text-xs text-muted-foreground text-center">
-                  Auto-refreshes every 30 seconds
-                </p>
-              </div>
+            <div className="rounded-xl border border-[#E5EAF2] p-3.5 bg-[#F8FAFC]">
+              <p className="font-bold text-[#102D56] flex items-center gap-1.5">
+                <Users className="size-3.5 text-[#8B5CF6]" />
+                Residents Directory Sheet
+              </p>
+              <p className="text-[#718096] mt-0.5">Citizen identification, address details, purok assignment, household number, and demographic records.</p>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="rounded-xl border border-[#E5EAF2] p-3.5 bg-[#F8FAFC]">
+              <p className="font-bold text-[#102D56] flex items-center gap-1.5">
+                <FileCheck className="size-3.5 text-[#10A875]" />
+                Clearance Ledger Sheet
+              </p>
+              <p className="text-[#718096] mt-0.5">Tracking codes, request timestamps, document types, release approvals, and statutory fee assessments.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-6 shadow-xs space-y-4">
+          <div className="flex items-center gap-3 pb-3 border-b border-[#E5EAF2]">
+            <div className="size-9 rounded-xl bg-[#FFA51E]/10 text-[#FFA51E] flex items-center justify-center">
+              <Clock className="size-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#102D56]">Fulfillment Telemetry</h3>
+              <p className="text-xs text-[#718096]">Live queue status across all barangays</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3.5 bg-[#F8FAFC] border border-[#E5EAF2] rounded-xl">
+              <div className="flex items-center gap-2">
+                <Clock className="size-4 text-[#FFA51E]" />
+                <span className="text-xs font-bold text-[#172B4D]">Pending Review</span>
+              </div>
+              <Badge className="bg-[#FFA51E]/15 text-[#FFA51E] border-0 text-xs font-bold px-2.5 py-1">
+                {liveStats.pendingRequests} Requests
+              </Badge>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 bg-[#F8FAFC] border border-[#E5EAF2] rounded-xl">
+              <div className="flex items-center gap-2">
+                <FileCheck className="size-4 text-[#10A875]" />
+                <span className="text-xs font-bold text-[#172B4D]">Released Today</span>
+              </div>
+              <Badge className="bg-[#10A875]/15 text-[#10A875] border-0 text-xs font-bold px-2.5 py-1">
+                {liveStats.todayRequests} Clearances
+              </Badge>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 bg-[#F8FAFC] border border-[#E5EAF2] rounded-xl">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-4 text-[#246BDE]" />
+                <span className="text-xs font-bold text-[#172B4D]">Overall Release Ratio</span>
+              </div>
+              <Badge className="bg-[#246BDE]/15 text-[#246BDE] border-0 text-xs font-bold px-2.5 py-1">
+                {liveStats.totalRequests > 0 
+                  ? Math.round((liveStats.completedRequests / liveStats.totalRequests) * 100)
+                  : 0}%
+              </Badge>
+            </div>
+
+            <div className="pt-2 text-center">
+              <p className="text-[11px] text-[#718096]">
+                Automatic background synchronization active • Interval 30s
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

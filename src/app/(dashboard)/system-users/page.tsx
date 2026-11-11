@@ -4,7 +4,6 @@ import { useAppContext } from "@/contexts/app-context";
 import { useFirebase } from "@/firebase";
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +32,13 @@ import {
   UserPlus,
   AlertCircle,
   RefreshCw,
-  KeyRound
+  KeyRound,
+  ShieldCheck,
+  UserCog,
+  Sparkles,
+  Building2,
+  Mail,
+  CheckCircle2
 } from "lucide-react";
 import type { User, Barangay } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
@@ -67,12 +72,10 @@ export default function SystemUsersPage() {
     
     setIsLoading(true);
     try {
-      // Load all users
       const usersSnap = await getDocs(collection(firestore, 'users'));
       const usersData = usersSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
       setUsers(usersData);
 
-      // Load all barangays
       const barangaysSnap = await getDocs(collection(firestore, 'barangays'));
       const barangaysData = barangaysSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Barangay));
       setBarangays(barangaysData);
@@ -102,7 +105,6 @@ export default function SystemUsersPage() {
   const handleDeleteUser = async (userId: string, userName: string, userEmail: string, isSuperAdmin: boolean) => {
     if (!firestore) return;
     
-    // Prevent deletion of super admin accounts
     if (isSuperAdmin) {
       toast({
         title: "Cannot Delete Super Admin",
@@ -112,7 +114,6 @@ export default function SystemUsersPage() {
       return;
     }
     
-    // Prevent deletion of the currently logged-in user
     if (userId === currentUser?.id) {
       toast({
         title: "Cannot Delete Your Own Account",
@@ -172,12 +173,13 @@ export default function SystemUsersPage() {
 
   const getBarangayName = (barangayId: string) => {
     const barangay = barangays.find(b => b.id === barangayId);
-    return barangay?.name || barangayId;
+    return barangay?.name || barangayId || "—";
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesBarangay = filterBarangay === 'all' || user.barangayId === filterBarangay;
     const matchesRole = filterRole === 'all' || user.role === filterRole;
     
@@ -187,289 +189,353 @@ export default function SystemUsersPage() {
   const stats = {
     total: users.length,
     superAdmins: users.filter(u => u.isSuperAdmin).length,
-    admins: users.filter(u => u.role === 'Admin').length,
+    admins: users.filter(u => u.role === 'Admin' && !u.isSuperAdmin).length,
     staff: users.filter(u => u.role !== 'Admin' && u.role !== 'Resident').length,
     residents: users.filter(u => u.role === 'Resident').length,
   };
 
   if (!isSuperAdmin) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Access Denied</h1>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p>You don't have permission to access System Users.</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-8 text-center space-y-3">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[#EF4655]/10 text-[#EF4655] mx-auto">
+            <AlertCircle className="size-6" />
+          </div>
+          <h2 className="text-xl font-bold text-[#172B4D]">Access Restricted</h2>
+          <p className="text-sm text-[#718096] max-w-md mx-auto">
+            You don't have permission to access System Users. Only Super Administrators can manage multi-barangay user identities.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight flex items-center gap-2">
-            <Users className="h-8 w-8 text-primary" />
-            System Users
-          </h1>
-          <p className="text-muted-foreground">
-            Manage users across all barangays
-          </p>
-        </div>
-        <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
-      </div>
-
-      {/* Quick Actions */}
-      <Card className="border-l-4 border-l-orange-500">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Found duplicate users?</h3>
-              <p className="text-sm text-muted-foreground">Click the delete button (🗑️) next to the duplicate entry to remove it</p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={loadData}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Executive Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C2340] via-[#123E75] to-[#1D5496] p-6 md:p-8 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-yellow-400/40 shrink-0 shadow-inner">
+            <UserCog className="size-8 text-yellow-400" />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-semibold text-blue-200 mb-1.5 backdrop-blur-xs">
+              <Sparkles className="size-3 text-yellow-400" />
+              <span>Multi-Barangay Identity & Access Management (IAM)</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+              System User Directory & Roles
+            </h1>
+            <p className="text-xs sm:text-sm text-blue-100/80 mt-0.5 max-w-xl">
+              Audit user credentials, assign municipal role authorizations, manage password resets, and grant super admin privileges.
+            </p>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-2.5 shrink-0">
+          <Button
+            variant="outline"
+            onClick={loadData}
+            disabled={isLoading}
+            className="rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-xs font-semibold h-10 px-4 text-xs sm:text-sm"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh Accounts
+          </Button>
+        </div>
+      </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Total Accounts</span>
+            <div className="size-9 rounded-xl bg-[#2474E8] flex items-center justify-center text-white shadow-xs">
+              <Users className="size-4" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{stats.total}</div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold text-[#102D56]">{stats.total}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">Platform-Wide</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Super Admins</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Super Admins</span>
+            <div className="size-9 rounded-xl bg-[#8B5CF6] flex items-center justify-center text-white shadow-xs">
+              <Shield className="size-4" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">{stats.superAdmins}</div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold text-[#102D56]">{stats.superAdmins}</div>
+            <p className="text-xs font-medium text-[#8B5CF6] mt-1">Full Oversight</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-green-50 to-white dark:from-green-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <UserPlus className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Barangay Admins</span>
+            <div className="size-9 rounded-xl bg-[#10A875] flex items-center justify-center text-white shadow-xs">
+              <ShieldCheck className="size-4" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-700 dark:text-green-400">{stats.admins}</div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold text-[#102D56]">{stats.admins}</div>
+            <p className="text-xs font-medium text-[#10A875] mt-1">LGU Leadership</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Staff</CardTitle>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <Users className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Barangay Staff</span>
+            <div className="size-9 rounded-xl bg-[#FFA51E] flex items-center justify-center text-white shadow-xs">
+              <UserCog className="size-4" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">{stats.staff}</div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold text-[#102D56]">{stats.staff}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">Desk & Encoders</p>
+          </div>
+        </div>
 
-        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-shadow bg-gradient-to-br from-red-50 to-white dark:from-red-950 dark:to-background">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Residents</CardTitle>
-            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-              <Users className="h-5 w-5 text-red-600 dark:text-red-400" />
+        <div className="rounded-2xl border border-[#E5EAF2] bg-white p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#718096]">Residents</span>
+            <div className="size-9 rounded-xl bg-[#0284C7] flex items-center justify-center text-white shadow-xs">
+              <Users className="size-4" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-700 dark:text-red-400">{stats.residents}</div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4">
+            <div className="text-2xl font-extrabold text-[#102D56]">{stats.residents}</div>
+            <p className="text-xs font-medium text-[#718096] mt-1">Portal Registered</p>
+          </div>
+        </div>
       </div>
 
-      {/* Filters */}
-      <Card className="border-t-4 border-t-blue-500 hover:shadow-xl transition-all">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <CardTitle>Filter Users</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={filterBarangay} onValueChange={setFilterBarangay}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="All Barangays" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Barangays</SelectItem>
-                {barangays.map(barangay => (
-                  <SelectItem key={barangay.id} value={barangay.id}>
-                    {barangay.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="Barangay Captain">Barangay Captain</SelectItem>
-                <SelectItem value="Secretary">Secretary</SelectItem>
-                <SelectItem value="Treasurer">Treasurer</SelectItem>
-                <SelectItem value="BHW">BHW</SelectItem>
-                <SelectItem value="Encoder">Encoder</SelectItem>
-                <SelectItem value="Resident">Resident</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters Toolbar */}
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white p-4 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#718096]" />
+          <Input
+            placeholder="Search by full name or email address..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-10 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D] placeholder-[#718096]"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <Select value={filterBarangay} onValueChange={setFilterBarangay}>
+            <SelectTrigger className="h-10 w-full sm:w-48 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-xs font-semibold text-[#172B4D]">
+              <SelectValue placeholder="All Barangays" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[#E5EAF2]">
+              <SelectItem value="all">All Barangays</SelectItem>
+              {barangays.map(barangay => (
+                <SelectItem key={barangay.id} value={barangay.id}>
+                  {barangay.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterRole} onValueChange={setFilterRole}>
+            <SelectTrigger className="h-10 w-full sm:w-44 rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-xs font-semibold text-[#172B4D]">
+              <SelectValue placeholder="All Roles" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-[#E5EAF2]">
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="Admin">Admin</SelectItem>
+              <SelectItem value="Barangay Captain">Barangay Captain</SelectItem>
+              <SelectItem value="Secretary">Secretary</SelectItem>
+              <SelectItem value="Treasurer">Treasurer</SelectItem>
+              <SelectItem value="BHW">BHW</SelectItem>
+              <SelectItem value="Encoder">Encoder</SelectItem>
+              <SelectItem value="Resident">Resident</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(searchTerm || filterBarangay !== 'all' || filterRole !== 'all') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchTerm('');
+                setFilterBarangay('all');
+                setFilterRole('all');
+              }}
+              className="h-10 rounded-xl text-xs text-[#718096] hover:text-[#102D56]"
+            >
+              Reset
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Users Table */}
-      <Card className="border-t-4 border-t-purple-500 hover:shadow-xl transition-all">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <CardTitle>All Users ({filteredUsers.length})</CardTitle>
-              <CardDescription>
-                Manage user accounts and permissions
-              </CardDescription>
-            </div>
+      <div className="rounded-2xl border border-[#E5EAF2] bg-white overflow-hidden shadow-xs">
+        <div className="p-5 border-b border-[#E5EAF2] flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-[#102D56]">Registered Accounts Directory</h2>
+            <p className="text-xs text-[#718096] mt-0.5">
+              Showing {filteredUsers.length} of {users.length} enrolled system users
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Loading users...</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Barangay</TableHead>
-                  <TableHead>Account Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No users found
+          <Badge variant="outline" className="rounded-full border-[#E5EAF2] text-[#246BDE] font-semibold text-xs px-3 py-1">
+            {filteredUsers.length} Filtered
+          </Badge>
+        </div>
+
+        {isLoading ? (
+          <div className="py-16 text-center text-sm text-[#718096]">
+            <Users className="size-8 mx-auto mb-2 text-[#CBD5E1] animate-pulse" />
+            Loading accounts database...
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="py-16 text-center text-sm text-[#718096] space-y-2">
+            <Users className="size-10 mx-auto text-[#CBD5E1]" />
+            <p className="font-semibold text-[#172B4D]">No users matching criteria</p>
+            <p className="text-xs text-[#718096]">Try adjusting search filters or clearing queries.</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#F8FAFC] border-b border-[#E5EAF2] hover:bg-[#F8FAFC]">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5 pl-6">User & Identity</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5">Assigned Role</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5">Assigned Barangay</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5">Status</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-[#718096] py-3.5 pr-6 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => {
+                const isCurrent = user.id === currentUser?.id;
+                
+                return (
+                  <TableRow key={user.id} className="hover:bg-[#F8FAFC]/80 transition-colors border-b border-[#F0F4FA]">
+                    <TableCell className="py-3.5 pl-6">
+                      <div className="flex items-center gap-3">
+                        <div className={`size-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                          user.isSuperAdmin 
+                            ? 'bg-[#8B5CF6]/15 text-[#8B5CF6]' 
+                            : user.role === 'Admin'
+                            ? 'bg-[#246BDE]/15 text-[#246BDE]'
+                            : user.role === 'Resident'
+                            ? 'bg-slate-100 text-slate-600'
+                            : 'bg-[#10A875]/15 text-[#10A875]'
+                        }`}>
+                          {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-[#102D56] flex items-center gap-1.5">
+                            {user.name}
+                            {user.isSuperAdmin && (
+                              <Badge className="bg-[#8B5CF6]/15 text-[#8B5CF6] text-[10px] px-2 py-0 border-0 font-bold">
+                                Super Admin
+                              </Badge>
+                            )}
+                            {isCurrent && (
+                              <span className="text-[10px] font-semibold text-[#718096]">(You)</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-[#718096] flex items-center gap-1 mt-0.5">
+                            <Mail className="size-3 text-[#246BDE]" />
+                            <span>{user.email}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="py-3.5">
+                      <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        user.role === 'Admin' 
+                          ? 'border-[#246BDE]/30 text-[#246BDE] bg-[#246BDE]/5'
+                          : user.role === 'Resident'
+                          ? 'border-slate-200 text-slate-600 bg-slate-50'
+                          : 'border-[#10A875]/30 text-[#10A875] bg-[#10A875]/5'
+                      }`}>
+                        {user.role}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="py-3.5 text-xs font-medium text-[#172B4D]">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="size-3.5 text-[#718096]" />
+                        <span>{getBarangayName(user.barangayId)}</span>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="py-3.5">
+                      <Badge className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        user.isDeleted 
+                          ? 'bg-[#EF4655]/15 text-[#EF4655] border-transparent' 
+                          : 'bg-[#10A875]/15 text-[#10A875] border-transparent'
+                      }`}>
+                        {user.isDeleted ? 'Inactive' : 'Active'}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="py-3.5 pr-6 text-right">
+                      <div className="flex justify-end items-center gap-1.5">
+                        {user.role === 'Admin' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleSuperAdmin(user.id, user.isSuperAdmin || false)}
+                            className="h-8 rounded-lg border-[#E5EAF2] text-xs font-semibold text-[#8B5CF6] hover:bg-[#8B5CF6]/10"
+                            title="Toggle Super Admin privileges"
+                          >
+                            <Shield className="size-3.5 mr-1" />
+                            {user.isSuperAdmin ? 'Revoke SA' : 'Grant SA'}
+                          </Button>
+                        )}
+
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditUser(user)}
+                          className="size-8 rounded-lg text-[#718096] hover:text-[#246BDE] hover:bg-[#F0F4FA]"
+                          title="Edit user assignment"
+                        >
+                          <Edit className="size-4" />
+                        </Button>
+
+                        {!isCurrent && (
+                          <Button
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleResetPassword(user)}
+                            className="size-8 rounded-lg text-[#718096] hover:text-[#FFA51E] hover:bg-[#FFFBEB]"
+                            title="Reset password"
+                          >
+                            <KeyRound className="size-4" />
+                          </Button>
+                        )}
+
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDeleteUser(user.id, user.name, user.email, user.isSuperAdmin || false)}
+                          disabled={user.isSuperAdmin || isCurrent}
+                          className={user.isSuperAdmin || isCurrent 
+                            ? "size-8 opacity-40 cursor-not-allowed" 
+                            : "size-8 rounded-lg text-[#718096] hover:text-[#EF4655] hover:bg-[#FEF2F2]"
+                          }
+                          title={user.isSuperAdmin ? "Super Admin accounts cannot be deleted" : "Delete user"}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredUsers.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{user.role}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {getBarangayName(user.barangayId)}
-                      </TableCell>
-                      <TableCell>
-                        {user.isDeleted ? (
-                          <Badge className="bg-red-100 text-red-700 border-red-200">Inactive</Badge>
-                        ) : (
-                          <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {user.role === 'Admin' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleSuperAdmin(user.id, user.isSuperAdmin || false)}
-                            >
-                              <Shield className="h-4 w-4 mr-1" />
-                              {user.isSuperAdmin ? 'Revoke' : 'Grant'} SA
-                            </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleEditUser(user)}
-                            title="Edit user"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {user.id !== currentUser?.id && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResetPassword(user)}
-                              title="Reset password"
-                              className="text-orange-600 hover:text-orange-700"
-                            >
-                              <KeyRound className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteUser(user.id, user.name, user.email, user.isSuperAdmin || false)}
-                            className={user.isSuperAdmin ? "opacity-50 cursor-not-allowed" : "text-destructive hover:text-destructive"}
-                            title={user.isSuperAdmin ? "Super admin accounts cannot be deleted" : "Delete user"}
-                            disabled={user.isSuperAdmin || user.id === currentUser?.id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       <ResetPasswordDialog
         isOpen={isResetDialogOpen}

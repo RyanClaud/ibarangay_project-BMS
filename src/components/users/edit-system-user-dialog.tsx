@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { UserCog } from 'lucide-react';
 import type { User, Barangay } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -86,7 +87,6 @@ export function EditSystemUserDialog({
     },
   });
 
-  // Reset form whenever the user prop changes
   useEffect(() => {
     if (user) {
       form.reset({
@@ -108,8 +108,8 @@ export function EditSystemUserDialog({
       });
 
       toast({
-        title: 'User updated successfully',
-        description: `${data.name}'s information has been updated.`,
+        title: 'User Updated',
+        description: `${data.name}'s account details have been saved.`,
       });
 
       onSaved();
@@ -126,26 +126,35 @@ export function EditSystemUserDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg rounded-2xl border-[#E5EAF2] p-6">
         <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogDescription>
-            Update user details. Email cannot be changed.
-          </DialogDescription>
+          <div className="flex items-center gap-3 pb-1">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-[#246BDE]/10 text-[#246BDE]">
+              <UserCog className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-base font-bold text-[#102D56]">
+                Modify Account Attributes
+              </DialogTitle>
+              <DialogDescription className="text-xs text-[#718096]">
+                Update identity name, organizational role, and barangay jurisdiction.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
             {/* Email — read-only */}
-            <div className="space-y-2">
-              <FormLabel>Email Address</FormLabel>
+            <div className="space-y-1.5">
+              <FormLabel className="text-xs font-bold text-[#172B4D]">Account Email</FormLabel>
               <Input
                 value={user?.email ?? ''}
                 disabled
-                className="bg-muted"
+                className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-xs font-mono text-[#718096]"
               />
-              <p className="text-xs text-muted-foreground">
-                Email cannot be changed.
+              <p className="text-[11px] text-[#718096]">
+                System login emails are managed through authentication credentials.
               </p>
             </div>
 
@@ -154,12 +163,16 @@ export function EditSystemUserDialog({
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold text-[#172B4D]">Full Legal Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Juan Dela Cruz" {...field} />
+                    <Input 
+                      placeholder="e.g., Juan Dela Cruz" 
+                      {...field} 
+                      className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm text-[#172B4D]"
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs text-[#EF4655]" />
                 </FormItem>
               )}
             />
@@ -169,15 +182,15 @@ export function EditSystemUserDialog({
               control={form.control}
               name="role"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold text-[#172B4D]">Authorized System Role</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm font-medium text-[#172B4D]">
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border-[#E5EAF2]">
                       {ALL_ROLES.map((role) => (
                         <SelectItem key={role} value={role}>
                           {role}
@@ -185,7 +198,7 @@ export function EditSystemUserDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage className="text-xs text-[#EF4655]" />
                 </FormItem>
               )}
             />
@@ -195,15 +208,15 @@ export function EditSystemUserDialog({
               control={form.control}
               name="barangayId"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Barangay</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold text-[#172B4D]">Assigned Barangay Jurisdiction</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl bg-[#F0F4FA] border-[#E2E8F0] text-sm font-medium text-[#172B4D]">
                         <SelectValue placeholder="Select a barangay" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border-[#E5EAF2]">
                       {barangays.map((barangay) => (
                         <SelectItem key={barangay.id} value={barangay.id}>
                           {barangay.name}
@@ -211,22 +224,27 @@ export function EditSystemUserDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage className="text-xs text-[#EF4655]" />
                 </FormItem>
               )}
             />
 
-            <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+            <DialogFooter className="pt-2">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={onClose}
                 disabled={form.formState.isSubmitting}
+                className="rounded-xl border-[#E5EAF2] text-xs font-semibold"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+              <Button 
+                type="submit" 
+                disabled={form.formState.isSubmitting}
+                className="rounded-xl bg-[#246BDE] hover:bg-[#1E5CC0] text-white font-bold text-xs"
+              >
+                {form.formState.isSubmitting ? 'Saving...' : 'Save Account Updates'}
               </Button>
             </DialogFooter>
           </form>
