@@ -92,6 +92,31 @@ export function ImportClientPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+/**
+ * Recursively strips `undefined` values and converts/omits them,
+ * ensuring Firestore WriteBatch never fails with "Unsupported field value: undefined".
+ */
+function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return null as any;
+  }
+  if (Array.isArray(data)) {
+    return data
+      .filter((item) => item !== undefined)
+      .map((item) => sanitizeForFirestore(item)) as any;
+  }
+  if (typeof data === "object" && !(data instanceof Date)) {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
   // ── Commit import ──
   const handleCommitImport = async () => {
     if (!result || !firestore || !barangayId || !currentUser) return;
@@ -102,10 +127,19 @@ export function ImportClientPage() {
       );
       const grouped = groupByHousehold(validRows);
 
-      const batch = writeBatch(firestore);
+      let currentBatch = writeBatch(firestore);
+      let batchOpCount = 0;
       let householdsCreated = 0;
       let individualsCreated = 0;
       const now = new Date().toISOString();
+
+      const commitBatchIfNeeded = async (force = false) => {
+        if (batchOpCount >= 400 || (force && batchOpCount > 0)) {
+          await currentBatch.commit();
+          currentBatch = writeBatch(firestore);
+          batchOpCount = 0;
+        }
+      };
 
       for (const [householdId, rows] of grouped.entries()) {
         // Check if household already exists
@@ -117,14 +151,14 @@ export function ImportClientPage() {
 
         if (!existingHh) {
           // Create the household document
-          const householdData = {
+          const householdData = sanitizeForFirestore({
             id: householdId,
-            barangayId,
+            barangayId: barangayId || "",
             purokId: null,
-            purokName: firstRow.parsed.purok,
-            address: firstRow.parsed.address,
+            purokName: firstRow.parsed.purok || "",
+            address: firstRow.parsed.address || "",
             householdHeadId: null,
-            householdHeadName: `${headRow.parsed.firstName} ${headRow.parsed.lastName}`,
+            householdHeadName: `${headRow.parsed.firstName} ${headRow.parsed.lastName}`.trim(),
             memberCount: rows.length,
             housingType: "Concrete",
             housingTenure: "Owned",
@@ -141,16 +175,20 @@ export function ImportClientPage() {
             updatedAt: now,
             createdBy: currentUser.id,
             updatedBy: currentUser.id,
-          };
-          batch.set(doc(firestore, "households", householdId), householdData);
+          });
+          currentBatch.set(doc(firestore, "households", householdId), householdData);
+          batchOpCount++;
           householdsCreated++;
+          await commitBatchIfNeeded();
         } else {
           // Update member count
-          batch.update(doc(firestore, "households", householdId), {
+          currentBatch.update(doc(firestore, "households", householdId), {
             memberCount: (existingHh.memberCount ?? 0) + rows.length,
             updatedAt: now,
             updatedBy: currentUser.id,
           });
+          batchOpCount++;
+          await commitBatchIfNeeded();
         }
 
         // Create/update individuals (as residents)
@@ -167,81 +205,91 @@ export function ImportClientPage() {
           });
 
           const programBeneficiaries = p.programs && p.programs.length > 0
-            ? p.programs.map((prog) => ({
-                programName: prog.programName,
-                status: prog.programStatus,
-                dateEnrolled: prog.dateEnrolled || now.split("T")[0],
-                issuingOffice: prog.issuingOffice || "",
-                referenceNumber: prog.referenceNumber || undefined,
-              }))
+            ? p.programs.map((prog) => {
+                const b: Record<string, any> = {
+                  programName: prog.programName || "",
+                  status: prog.programStatus || "Enrolled",
+                  dateEnrolled: prog.dateEnrolled || now.split("T")[0],
+                  issuingOffice: prog.issuingOffice || "",
+                };
+                if (prog.referenceNumber && prog.referenceNumber.trim()) {
+                  b.referenceNumber = prog.referenceNumber.trim();
+                }
+                return b;
+              })
             // Legacy fallback: single-program fields
             : p.program
             ? [
                 {
-                  programName: p.program,
-                  status: p.programStatus,
+                  programName: p.program || "",
+                  status: p.programStatus || "Enrolled",
                   dateEnrolled: p.dateEnrolled || now.split("T")[0],
                   issuingOffice: p.issuingOffice || "",
                 },
               ]
             : [];
 
-          const residentData = {
+          const residentData = sanitizeForFirestore({
             id: residentId,
             userId: residentId,
-            firstName: p.firstName,
+            firstName: p.firstName || "",
             middleName: p.middleName || "",
-            lastName: p.lastName,
+            lastName: p.lastName || "",
             extension: p.extension || "",
-            sex: p.sex,
-            birthdate: p.birthdate,
-            civilStatus: p.civilStatus,
-            relationshipToHead: p.relationshipToHead,
-            citizenship: p.citizenship,
-            lengthOfResidencyYears: p.residencyYears,
-            education: p.education,
-            occupation: p.occupation,
-            contactNumber: p.contactNumber,
-            philhealthStatus: p.philhealth,
-            disability: p.disability,
-            individualStatus: p.individualStatus,
-            sectorTags: p.sectorTags,
+            sex: p.sex || "Male",
+            birthdate: p.birthdate || "",
+            civilStatus: p.civilStatus || "Single",
+            relationshipToHead: p.relationshipToHead || "Other",
+            citizenship: p.citizenship || "Filipino",
+            lengthOfResidencyYears: typeof p.residencyYears === "number" ? p.residencyYears : 0,
+            education: p.education || "No formal education",
+            occupation: p.occupation || "",
+            contactNumber: p.contactNumber || "",
+            philhealthStatus: p.philhealth || "Unknown",
+            disability: p.disability || "None",
+            individualStatus: p.individualStatus || "Active",
+            sectorTags: Array.isArray(p.sectorTags) ? p.sectorTags : [],
             programBeneficiaries,
-            voterStatus: p.voterStatus,
-            precinctNumber: p.precinctNumber,
+            voterStatus: p.voterStatus || "Unknown",
+            precinctNumber: p.precinctNumber || "",
             voterVerificationSource: p.voterVerificationDate
               ? "Import"
               : "",
             voterVerificationDate: p.voterVerificationDate || null,
-            isEligibleUnregistered: isEligible,
-            householdId,
-            householdNumber: householdId,
-            purok: p.purok,
-            address: p.address || `${p.purok}, ${barangayName}`,
+            isEligibleUnregistered: Boolean(isEligible),
+            householdId: householdId || "",
+            householdNumber: householdId || "",
+            purok: p.purok || "",
+            address: p.address || `${p.purok || ""}, ${barangayName}`,
             email: "",
             avatarUrl: "",
-            barangayId,
+            barangayId: barangayId || "",
             consentObtained: true,
             consentDate: now.split("T")[0],
             createdAt: now,
             updatedAt: now,
             createdBy: currentUser.id,
             updatedBy: currentUser.id,
-          };
-          batch.set(doc(firestore, "residents", residentId), residentData);
+          });
+          currentBatch.set(doc(firestore, "residents", residentId), residentData);
+          batchOpCount++;
           individualsCreated++;
+          await commitBatchIfNeeded();
 
           // If this is the head, set as householdHeadId
           if (isHead) {
-            batch.update(doc(firestore, "households", householdId), {
+            currentBatch.update(doc(firestore, "households", householdId), {
               householdHeadId: residentId,
-              householdHeadName: `${p.firstName} ${p.lastName}`,
+              householdHeadName: `${p.firstName} ${p.lastName}`.trim(),
             });
+            batchOpCount++;
+            await commitBatchIfNeeded();
           }
         }
       }
 
-      await batch.commit();
+      // Commit any remaining operations
+      await commitBatchIfNeeded(true);
 
       // Log the import
       await logAudit(

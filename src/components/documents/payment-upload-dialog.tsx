@@ -151,7 +151,7 @@ export function PaymentUploadDialog({
         paymentDetails: {
           method: paymentMethod,
           referenceNumber: referenceNumber,
-          accountName: accountName || undefined,
+          accountName: accountName ? accountName.trim() : null,
           paymentDate: paymentDate,
           proofImageUrl: proofImageUrl,
         },
