@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw, Sparkles, Home, AlertTriangle } from 'lucide-react';
 
 export default function DashboardError({
   error,
@@ -10,16 +10,33 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  // CRITICAL: Check creation mode IMMEDIATELY
   const [isCreatingUser, setIsCreatingUser] = useState(() => {
     if (typeof window === 'undefined') return false;
     const creating = sessionStorage.getItem('creating_user') === 'true';
-    console.log('🔍 Dashboard error boundary - creation mode:', creating);
     return creating;
   });
 
+  const isChunkError = 
+    error?.name === 'ChunkLoadError' || 
+    error?.message?.includes('Loading chunk') ||
+    error?.message?.includes('ChunkLoadError') ||
+    error?.message?.includes('Failed to fetch dynamically imported module') ||
+    error?.message?.includes('no-response');
+
   useEffect(() => {
-    // Check if we're in user creation mode
+    if (isChunkError) {
+      const reloadKey = 'chunk_error_reload_ts';
+      const lastReload = sessionStorage.getItem(reloadKey);
+      const now = Date.now();
+
+      if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+        sessionStorage.setItem(reloadKey, now.toString());
+        console.warn('🔄 Auto-refreshing on ChunkLoadError to fetch latest deployment...');
+        handleHardRefresh();
+        return;
+      }
+    }
+
     const checkAndUpdate = () => {
       const creating = sessionStorage.getItem('creating_user') === 'true';
       setIsCreatingUser(creating);
@@ -29,10 +46,8 @@ export default function DashboardError({
     const creating = checkAndUpdate();
     
     if (creating) {
-      // During user creation, suppress the error completely
       console.log('🔒 Dashboard error suppressed during user creation:', error.message);
       
-      // Poll for completion
       const checkInterval = setInterval(() => {
         const stillCreating = sessionStorage.getItem('creating_user') === 'true';
         if (!stillCreating) {
@@ -44,12 +59,10 @@ export default function DashboardError({
       
       return () => clearInterval(checkInterval);
     } else {
-      // Normal error handling
       console.error('Dashboard error:', error);
     }
-  }, [error]);
+  }, [error, isChunkError]);
 
-  // Continuously monitor creation mode
   useEffect(() => {
     const interval = setInterval(() => {
       const creating = sessionStorage.getItem('creating_user') === 'true';
@@ -59,7 +72,21 @@ export default function DashboardError({
     return () => clearInterval(interval);
   }, []);
 
-  // If in creation mode, show loading overlay
+  const handleHardRefresh = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+    } catch (e) {
+      console.error('Failed to unregister service worker:', e);
+    } finally {
+      window.location.reload();
+    }
+  };
+
   if (isCreatingUser) {
     return (
       <div 
@@ -108,29 +135,68 @@ export default function DashboardError({
     );
   }
 
+  // If this is a chunk load error (new deployment happened), show a friendly update banner
+  if (isChunkError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4">
+        <div className="text-center space-y-6 p-8 max-w-md bg-white border border-[#E5EAF2] rounded-2xl shadow-sm">
+          <div className="size-14 mx-auto rounded-2xl bg-[#246BDE]/10 text-[#246BDE] flex items-center justify-center">
+            <Sparkles className="size-7 text-[#246BDE]" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold text-[#102D56]">
+              System Update Available
+            </h1>
+            <p className="text-xs text-[#718096] leading-relaxed">
+              A newer version of the dashboard was recently deployed. Refresh your browser to load the latest application assets.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
+            <button
+              onClick={handleHardRefresh}
+              className="px-5 py-2.5 bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="size-3.5" />
+              <span>Refresh Application</span>
+            </button>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="px-5 py-2.5 bg-white border border-[#E5EAF2] hover:bg-[#F8FAFC] text-[#172B4D] rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2"
+            >
+              <Home className="size-3.5 text-[#718096]" />
+              <span>Return Home</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Normal error page for dashboard errors
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="text-center space-y-6 p-8 max-w-md">
-        <div className="text-6xl">⚠️</div>
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4">
+      <div className="text-center space-y-6 p-8 max-w-md bg-white border border-[#E5EAF2] rounded-2xl shadow-sm">
+        <div className="size-14 mx-auto rounded-2xl bg-[#EF4655]/10 text-[#EF4655] flex items-center justify-center">
+          <AlertTriangle className="size-7" />
+        </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-xl font-bold text-[#102D56]">
             Dashboard Error
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-xs text-[#718096] break-words">
             {error.message || 'An error occurred in the dashboard'}
           </p>
         </div>
-        <div className="flex gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
           <button
-            onClick={() => reset()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={() => handleHardRefresh()}
+            className="px-5 py-2.5 bg-[#246BDE] hover:bg-[#1E5CC0] text-white rounded-xl text-xs font-bold transition-all shadow-xs"
           >
             Try Again
           </button>
           <button
             onClick={() => window.location.href = '/'}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="px-5 py-2.5 bg-white border border-[#E5EAF2] hover:bg-[#F8FAFC] text-[#172B4D] rounded-xl text-xs font-semibold transition-all"
           >
             Go to Home
           </button>
