@@ -74,8 +74,10 @@ export type User = {
   avatarUrl: string;
   role: Role;
   barangayId: string; // Assigned barangay
+  barangayName?: string;
   residentId?: string; // Link user to a resident profile
   isSuperAdmin?: boolean; // Can manage multiple barangays
+  isProfileComplete?: boolean; // True when resident has completed barangay identification
   status?: 'Active' | 'Inactive';
   isDeleted?: boolean; // Soft delete flag
   deletedAt?: string; // When the user was deleted
@@ -89,6 +91,7 @@ export type Resident = {
   userId: string;
   firstName: string;
   lastName: string;
+  middleName?: string;
   purok: string;
   address: string;
   birthdate: string;
@@ -96,6 +99,13 @@ export type Resident = {
   avatarUrl: string;
   email: string;
   barangayId: string; // Assigned barangay
+  barangayName?: string;
+  municipality?: string;
+  province?: string;
+  region?: string;
+  contactNumber?: string;
+  status?: string;
+  createdAt?: string;
 };
 
 export type DocumentType = "Barangay Clearance" | "Certificate of Residency" | "Certificate of Indigency" | "Business Permit" | "Good Moral Character Certificate" | "Solo Parent Certificate";

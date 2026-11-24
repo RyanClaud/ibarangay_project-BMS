@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { FcGoogle } from 'react-icons/fc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,11 +37,12 @@ import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAppContext();
+  const { login, signInWithGoogle } = useAppContext();
   const { user: authenticatedUser, isLoading: isAuthLoading } = useAppAuth();
   const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
   const [isProcessingLogin, setIsProcessingLogin] = useState(false);
+  const [isProcessingGoogle, setIsProcessingGoogle] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Rate Limiting & Brute-Force State
@@ -151,7 +153,25 @@ export default function LoginPage() {
     }
   };
 
-  const isLoading = isAuthLoading || isProcessingLogin;
+  const handleGoogleSignIn = async () => {
+    setIsProcessingGoogle(true);
+    try {
+      await signInWithGoogle();
+      // AppContext's onSnapshot handles redirect to /complete-profile, /super-admin, or /dashboard
+    } catch (error: any) {
+      if (error?.code !== 'auth/popup-closed-by-user') {
+        toast({
+          title: 'Google Sign-In Failed',
+          description: error?.message || 'Unable to sign in with Google. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsProcessingGoogle(false);
+    }
+  };
+
+  const isLoading = isAuthLoading || isProcessingLogin || isProcessingGoogle;
 
   if (isAuthLoading && !isProcessingLogin) {
     return (
@@ -403,6 +423,39 @@ export default function LoginPage() {
                   )}
                 </Button>
               </form>
+
+              {/* Or continue with divider */}
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-[#E5EAF2]" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-3 text-[#718096] font-semibold text-[11px] tracking-wider">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              {/* Google Sign In Button */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading || rateStatus.isLocked}
+                className="w-full h-11 rounded-xl bg-white hover:bg-[#F8FAFC] text-[#172B4D] border-[#E2E8F0] hover:border-[#CBD5E1] font-semibold text-sm shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+              >
+                {isProcessingGoogle ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin text-[#246BDE]" />
+                    <span>Connecting to Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle className="size-5 shrink-0" />
+                    <span>Sign in with Google</span>
+                  </>
+                )}
+              </Button>
 
               {/* Registration Link & Guidance */}
               <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E5EAF2] space-y-2 text-center text-xs">

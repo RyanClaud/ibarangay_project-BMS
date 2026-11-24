@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { FcGoogle } from 'react-icons/fc';
+import { useAppContext } from '@/contexts/app-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,7 +34,9 @@ import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseConfig } from '@/firebase/config';
 
 export default function RegisterPage() {
+  const { signInWithGoogle } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingGoogle, setIsProcessingGoogle] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -242,6 +246,21 @@ export default function RegisterPage() {
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    setIsProcessingGoogle(true);
+    setError('');
+    try {
+      await signInWithGoogle();
+      // AppContext's onSnapshot detects incomplete resident profile and routes to /complete-profile
+    } catch (err: any) {
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        setError(err?.message || 'Failed to sign up with Google. Please try again.');
+      }
+    } finally {
+      setIsProcessingGoogle(false);
+    }
+  };
+
   // Success View
   if (success) {
     return (
@@ -405,6 +424,52 @@ export default function RegisterPage() {
                 </div>
               </div>
             )}
+
+            {/* Google Fast Registration Option */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#F8FAFC] border border-[#E5EAF2] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-[#172B4D] uppercase tracking-wider">
+                    Fast Resident Registration
+                  </h4>
+                  <p className="text-xs text-[#718096]">
+                    Use your Google account to sign up in one click. You&apos;ll be asked to confirm your barangay right after.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGoogleSignUp}
+                disabled={isLoading || isProcessingGoogle}
+                className="w-full h-11 rounded-xl bg-white hover:bg-[#F1F5F9] text-[#172B4D] border-[#CBD5E1] hover:border-[#94A3B8] font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+              >
+                {isProcessingGoogle ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin text-[#246BDE]" />
+                    <span>Connecting to Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle className="size-5 shrink-0" />
+                    <span>Sign up with Google</span>
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Divider */}
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-[#E5EAF2]" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-3 text-[#718096] font-semibold text-[11px] tracking-wider">
+                  Or register with email manually
+                </span>
+              </div>
+            </div>
 
             {/* Section 1: Personal Information */}
             <div className="space-y-4">

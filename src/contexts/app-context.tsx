@@ -383,12 +383,28 @@ function AppProviderContent({ children }: { children: ReactNode }) {
           logout();
         } else {
           setCurrentUser(appUser);
-          if (isPublicPage && appUser) { // Check appUser to be safe
-            // Redirect Super Admins to their specific dashboard
-            if (appUser.isSuperAdmin) {
-              router.push('/super-admin');
-            } else {
-              router.push('/dashboard');
+
+          // Check if resident profile needs completion (identifying barangay & residency details)
+          const isProfileIncomplete = appUser.role === 'Resident' && (!appUser.barangayId || appUser.barangayId === 'default' || appUser.isProfileComplete === false);
+
+          if (isProfileIncomplete) {
+            if (pathname !== '/complete-profile') {
+              router.push('/complete-profile');
+            }
+          } else {
+            if (pathname === '/complete-profile') {
+              if (appUser.isSuperAdmin) {
+                router.push('/super-admin');
+              } else {
+                router.push('/dashboard');
+              }
+            } else if (isPublicPage && appUser) { // Check appUser to be safe
+              // Redirect Super Admins to their specific dashboard
+              if (appUser.isSuperAdmin) {
+                router.push('/super-admin');
+              } else {
+                router.push('/dashboard');
+              }
             }
           }
         }
@@ -410,6 +426,7 @@ function AppProviderContent({ children }: { children: ReactNode }) {
             role: 'Resident', // All auto-created users default to 'Resident'
             residentId: firebaseUser.uid,
             barangayId: 'default', // Assign to default barangay
+            isProfileComplete: false,
         };
         setDoc(userDocRef, newUser).catch(err => {
             console.error("Failed to create default user document:", err);
@@ -496,6 +513,7 @@ function AppProviderContent({ children }: { children: ReactNode }) {
     await setPersistence(auth, browserSessionPersistence);
     
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
         const result = await signInWithPopup(auth, provider);
         const authUser = result.user;
@@ -512,42 +530,50 @@ function AppProviderContent({ children }: { children: ReactNode }) {
             const residentId = authUser.uid;
             const userId = `R-${authUser.uid.slice(0,6).toUpperCase()}`;
 
+            const nameParts = (authUser.displayName || '').trim().split(/\s+/);
+            const firstName = nameParts[0] || 'Resident';
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
             const newResident: Resident = {
                 id: residentId,
                 userId: userId,
-                firstName: authUser.displayName?.split(' ')[0] || 'New',
-                lastName: authUser.displayName?.split(' ').slice(1).join(' ') || 'Resident',
-                purok: 'Not specified',
-                address: 'Not specified',
-                birthdate: new Date().toISOString().split('T')[0], // Placeholder
+                firstName: firstName,
+                lastName: lastName,
+                purok: '',
+                address: '',
+                birthdate: '',
                 householdNumber: 'N/A',
                 email: authUser.email || '',
                 avatarUrl: authUser.photoURL || `https://picsum.photos/seed/${residentId}/100/100`,
-                barangayId: 'default', // Assign to default barangay
+                barangayId: 'default', // Requires profile completion to assign valid barangay
+                status: 'Pending Verification',
+                createdAt: new Date().toISOString(),
             };
             const residentRef = doc(firestore, 'residents', residentId);
             batch.set(residentRef, newResident);
 
             const newUser: User = {
                 id: residentId,
-                name: authUser.displayName || 'New User',
+                name: authUser.displayName || 'Resident User',
                 email: authUser.email || '',
                 avatarUrl: newResident.avatarUrl,
                 role: 'Resident',
                 residentId: residentId,
-                barangayId: 'default', // Assign to default barangay
+                barangayId: 'default',
+                isProfileComplete: false, // Flag for profile completion gate
             };
             batch.set(userDocRef, newUser);
 
             await batch.commit();
         }
         // The onSnapshot listener in the main useEffect will handle setting the currentUser
-        // and redirecting to the dashboard automatically for both new and existing users.
+        // and redirecting to /complete-profile or /dashboard automatically.
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       if (error.code !== 'auth/popup-closed-by-user') {
         toast({ title: 'Google Sign-In Failed', description: error.message || 'An unknown error occurred.', variant: 'destructive' });
       }
+      throw error;
     }
   };
 

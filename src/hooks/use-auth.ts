@@ -44,6 +44,7 @@ export const ensureUserDocument = async (firestore: any, authUser: AuthUser, log
         role: 'Resident', // Default to 'Resident'
         residentId: authUser.uid, // Assume residentId is the same as userId for this default case
         barangayId: 'default',
+        isProfileComplete: false,
     };
     await setDoc(userRef, newUser);
     return newUser;
@@ -60,6 +61,7 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const isPublicPage = pathname === '/' || pathname === '/login' || pathname === '/forgot-password' || pathname === '/register' || pathname === '/initial-setup';
     const isLoginPage = pathname === '/login';
 
     // Primary loading state: wait for Firebase Auth to settle.
@@ -71,7 +73,7 @@ export function useAuth() {
     // After Auth settles, if there's no firebaseUser, they are logged out.
     if (!firebaseUser) {
       setCurrentUser(null);
-      if (!isLoginPage) {
+      if (!isPublicPage) {
         router.push('/login');
       }
       setIsLoading(false);
@@ -83,7 +85,14 @@ export function useAuth() {
     ensureUserDocument(firestore, firebaseUser, mainAppLogout).then((appUser) => {
         if (appUser) {
             setCurrentUser(appUser);
-            if (isLoginPage) {
+
+            const isProfileIncomplete = appUser.role === 'Resident' && (!appUser.barangayId || appUser.barangayId === 'default' || appUser.isProfileComplete === false);
+
+            if (isProfileIncomplete) {
+                if (pathname !== '/complete-profile') {
+                    router.push('/complete-profile');
+                }
+            } else if (isLoginPage || pathname === '/complete-profile') {
                 // Redirect Super Admins to their specific dashboard
                 if (appUser.isSuperAdmin) {
                     router.push('/super-admin');
